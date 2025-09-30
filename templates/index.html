@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Latest Servers{% endblock title %}
+
+{% block content %}
+<div class="max-w-5xl w-full p-6 bg-white shadow-lg rounded-lg">
+  <h1 class="text-3xl font-bold mb-6 text-center">Latest Servers</h1>
+
+  <!-- Sorting Controls -->
+  <div class="mb-6 flex flex-wrap gap-4 items-center justify-between">
+    <div class="flex items-center gap-2 flex-wrap">
+      <span class="text-sm font-medium text-gray-700">Sort by:</span>
+      <div class="flex gap-2">
+        {% for sort_option in ["newest", "players"] %}
+          <a href="?sort={{ sort_option }}&order={% if current_sort == sort_option %}{% if current_order == "desc" %}asc{% else %}desc{% endif %}{% else %}desc{% endif %}"
+             class="px-4 py-2 text-sm rounded-md font-medium transition-colors
+             {% if current_sort == sort_option %}
+               bg-blue-100 text-blue-800 border border-blue-300
+             {% else %}
+               bg-gray-100 text-gray-700 hover:bg-gray-200
+             {% endif %}">
+            {{ sort_option | capitalize }}
+            {% if current_sort == sort_option %}
+              {% if current_order == "asc" %}↑{% else %}↓{% endif %}
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="text-sm text-gray-600">
+      Showing {{ servers | default(value=[]) | length }} servers
+    </div>
+  </div>
+
+  <!-- Server Table -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full table-auto border-collapse">
+      <thead>
+        <tr class="bg-gray-100">
+          <th class="px-4 py-2 text-left font-semibold">Favicon</th>
+          <th class="px-4 py-2 text-left font-semibold">IP</th>
+          <th class="px-4 py-2 text-left font-semibold">Players Online</th>
+          <th class="px-4 py-2 text-left font-semibold">Added At</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% if servers is defined and servers | length > 0 %}
+          {% for server in servers %}
+            <tr class="border-b hover:bg-gray-50">
+              <td class="px-4 py-2">
+                {% if server.favicon %}
+                  <img src="{{ server.favicon }}" alt="favicon" class="w-6 h-6 rounded" />
+                {% else %}
+                  <div class="w-6 h-6 bg-gray-300 rounded"></div>
+                {% endif %}
+              </td>
+
+              <td class="px-4 py-2">
+                <a href="/server/{{ server.address }}" class="text-blue-600 hover:underline">
+                  {{ server.address }}
+                </a>
+              </td>
+
+              <td class="px-4 py-2">
+                {{ server.players_online | default(value=0) }}
+              </td>
+
+              <td class="px-4 py-2 text-sm text-gray-600">
+                {% if server.created_at %}
+                  {{ server.created_at }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="4" class="px-4 py-6 text-center text-gray-500">
+              No servers found
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock content %}

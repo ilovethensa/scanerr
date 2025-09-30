@@ -5,9 +5,8 @@ mod commands;
 use poise::serenity_prelude as serenity;
 use sqlx::SqlitePool;
 use std::{
-    collections::HashMap,
     env::var,
-    sync::{Arc, Mutex},
+    sync::Arc,
     time::Duration,
 };
 
@@ -48,11 +47,9 @@ async fn main() {
 
     let options = poise::FrameworkOptions {
         commands: vec![
-            commands::help(),
             commands::status(),
             commands::getserver(),
             commands::latestservers(),
-            commands::addip(),
             commands::getplayer(),
         ],
         prefix_options: poise::PrefixFrameworkOptions {
