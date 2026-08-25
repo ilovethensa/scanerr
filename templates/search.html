@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    <title>Search Results - scanerr</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; }
@@ -14,7 +14,7 @@
         .search-box input { width: 100%; padding: 12px; font-size: 16px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; }
         .search-box input:focus { outline: none; border-color: #58a6ff; }
         .results { margin-top: 20px; }
-        .result-item { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+        .result-item { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; margin-bottom: 12px; text-decoration: none; color: inherit; display: block; }
         .result-item:hover { border-color: #58a6ff; }
         .result-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
         .result-ip { color: #58a6ff; font-weight: bold; }
@@ -29,17 +29,39 @@
     <header>
         <div class="container">
             <h1>scanerr</h1>
-            <p style="color: #8b949e; margin-top: 4px;">Service Scanner for Homelabbers</p>
         </div>
     </header>
     <div class="container">
         <div class="search-box">
             <form action="/search" method="get">
-                <input type="text" name="q" placeholder="Search services... (e.g., port:443 tag:iot http.title:nginx)" value="">
+                <input type="text" name="q" placeholder="Search services..." value="{{ query }}">
             </form>
         </div>
+        <p style="color: #8b949e; margin-bottom: 16px;">{{ results }} results found</p>
         <div class="results">
-            <div class="empty">Enter a search query to find services</div>
+            {% for service in services %}
+            <a href="/service/{{ service.0 }}" class="result-item">
+                <div class="result-header">
+                    <span class="result-ip">{{ service.7 }}</span>
+                    <span class="result-port">:{{ service.1 }}/{{ service.2 }}</span>
+                </div>
+                {% if service.4.http %}
+                <div style="color: #8b949e; margin-top: 4px;">
+                    {% if service.4.http.title %}{{ service.4.http.title }}{% endif %}
+                </div>
+                {% endif %}
+                {% if service.4.tags %}
+                <div class="result-tags">
+                    {% for tag in service.4.tags %}
+                    <span class="tag{% if tag == 'iot' %} iot{% endif %}">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </a>
+            {% endfor %}
+            {% if not services %}
+            <div class="empty">No services found matching your query</div>
+            {% endif %}
         </div>
     </div>
 </body>

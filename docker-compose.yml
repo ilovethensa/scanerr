@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: scanerr
+      POSTGRES_USER: scanerr
+      POSTGRES_PASSWORD: scanerr
+    network_mode: host
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scanerr -h 127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  scan:
+    image: scanerr-app
+    build: .
+    command: ["scan"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      RUST_LOG: info
+    network_mode: host
+    cap_add:
+      - NET_RAW
+    volumes:
+      - ./scanerr.toml:/app/scanerr.toml:ro
+
+  probe:
+    image: scanerr-app
+    command: ["probe"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      RUST_LOG: info
+    network_mode: host
+    volumes:
+      - ./scanerr.toml:/app/scanerr.toml:ro
+
+  enrich:
+    image: scanerr-app
+    command: ["enrich"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      RUST_LOG: info
+    network_mode: host
+    volumes:
+      - ./scanerr.toml:/app/scanerr.toml:ro
+      - ./assets:/app/assets
+
+  serve:
+    image: scanerr-app
+    command: ["serve"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      RUST_LOG: info
+    network_mode: host
+    volumes:
+      - ./scanerr.toml:/app/scanerr.toml:ro
+      - ./assets:/app/assets
+
+volumes:
+  pgdata:

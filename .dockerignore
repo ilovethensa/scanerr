@@ -1,0 +1,13 @@
+target/
+.git/
+.commandcode/
+*.md
+*.toml
+!Cargo.toml
+!Cargo.lock
+docker-compose.yml
+Dockerfile
+.gitignore
+assets/
+test-assets/
+scanerr.toml

@@ -1,0 +1,92 @@
+[
+  {
+    "name": "nginx",
+    "product": "nginx",
+    "version": null,
+    "tags": ["web", "server"],
+    "matchers": [
+      { "HeaderServer": "nginx" }
+    ]
+  },
+  {
+    "name": "apache",
+    "product": "Apache httpd",
+    "version": null,
+    "tags": ["web", "server"],
+    "matchers": [
+      { "HeaderServer": "Apache" }
+    ]
+  },
+  {
+    "name": "iis",
+    "product": "Microsoft IIS",
+    "version": null,
+    "tags": ["web", "server"],
+    "matchers": [
+      { "HeaderServer": "Microsoft-IIS" }
+    ]
+  },
+  {
+    "name": "proxmox",
+    "product": "Proxmox VE",
+    "version": null,
+    "tags": ["iot", "admin"],
+    "matchers": [
+      { "Title": "Proxmox" }
+    ]
+  },
+  {
+    "name": "synology",
+    "product": "Synology DSM",
+    "version": null,
+    "tags": ["iot", "nas"],
+    "matchers": [
+      { "Title": "Synology" }
+    ]
+  },
+  {
+    "name": "routeros",
+    "product": "MikroTik RouterOS",
+    "version": null,
+    "tags": ["iot", "router"],
+    "matchers": [
+      { "Title": "RouterOS" }
+    ]
+  },
+  {
+    "name": "openwrt",
+    "product": "OpenWrt",
+    "version": null,
+    "tags": ["iot", "router"],
+    "matchers": [
+      { "Title": "OpenWrt" }
+    ]
+  },
+  {
+    "name": "pihole",
+    "product": "Pi-hole",
+    "version": null,
+    "tags": ["iot", "dns"],
+    "matchers": [
+      { "Title": "Pi-hole" }
+    ]
+  },
+  {
+    "name": "portainer",
+    "product": "Portainer",
+    "version": null,
+    "tags": ["iot", "docker"],
+    "matchers": [
+      { "Title": "Portainer" }
+    ]
+  },
+  {
+    "name": "grafana",
+    "product": "Grafana",
+    "version": null,
+    "tags": ["iot", "monitoring"],
+    "matchers": [
+      { "Title": "Grafana" }
+    ]
+  }
+]

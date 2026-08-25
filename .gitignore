@@ -2,3 +2,5 @@
 server.db
 .env
 .sqlx/
+.commandcode/
+assets/
