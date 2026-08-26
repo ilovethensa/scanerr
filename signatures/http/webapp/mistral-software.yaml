@@ -1,0 +1,18 @@
+id: mistral-software
+name: Mistral Software
+category: webapp
+tags: [accounting, bulgaria]
+priority: 85
+matchers:
+  - field: http.title
+    op: icontains
+    value: Mistral Software
+    weight: 8
+  - field: http.body
+    op: icontains
+    value: Mistral Software API
+    weight: 6
+  - field: http.body
+    op: contains
+    value: CheckDbCon
+    weight: 4

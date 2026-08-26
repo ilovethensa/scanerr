@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e14; color: #c5cdd9; line-height: 1.5; }
+        a { color: #4da3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .topbar { background: #11161d; border-bottom: 1px solid #1e2733; padding: 12px 0; }
+        .topbar-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 16px; }
+        .logo { font-size: 18px; font-weight: 700; color: #4da3ff; letter-spacing: -0.5px; }
+        .nav { display: flex; gap: 16px; margin-left: auto; }
+        .nav a { font-size: 13px; color: #6b7a8d; }
+        .nav a:hover { color: #4da3ff; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .card { background: #11161d; border: 1px solid #1e2733; border-radius: 8px; padding: 20px; }
+        .card .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7a8d; margin-bottom: 4px; }
+        .card .value { font-size: 32px; font-weight: 700; color: #e8ecf0; font-family: monospace; }
+
+        .section-title { font-size: 14px; font-weight: 600; color: #6b7a8d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 32px; }
+
+        .stat-table { width: 100%; border-collapse: collapse; }
+        .stat-table th { text-align: left; padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7a8d; border-bottom: 1px solid #1e2733; font-weight: 600; }
+        .stat-table td { padding: 8px 12px; border-bottom: 1px solid #141a22; font-size: 13px; }
+        .stat-table .num { color: #e8ecf0; font-family: monospace; font-weight: 600; }
+        .stat-table .bar-cell { width: 40%; }
+        .bar { height: 16px; background: #1a2332; border-radius: 3px; overflow: hidden; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, #4da3ff, #3d8ad4); border-radius: 3px; }
+
+        .queue-status { background: #11161d; border: 1px solid #1e2733; border-radius: 8px; padding: 20px; }
+        .queue-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #141a22; }
+        .queue-row:last-child { border-bottom: none; }
+        .queue-name { font-weight: 600; color: #c5cdd9; }
+        .queue-detail { font-size: 13px; color: #6b7a8d; }
+        .queue-count { font-family: monospace; font-size: 14px; color: #4da3ff; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-inner">
+            <a href="/" class="logo">scanerr</a>
+            <div class="nav">
+                <a href="/">hosts</a>
+                <a href="/search">search</a>
+                <a href="/stats">stats</a>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+        <div class="cards">
+            <div class="card">
+                <div class="label">Hosts</div>
+                <div class="value">{{ stats.total_hosts }}</div>
+            </div>
+            <div class="card">
+                <div class="label">Services</div>
+                <div class="value">{{ stats.total_services }}</div>
+            </div>
+            <div class="card">
+                <div class="label">Countries</div>
+                <div class="value">{{ stats.total_countries }}</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <div class="section-title">Top Ports</div>
+                <table class="stat-table">
+                    <thead><tr><th>Port</th><th>Services</th><th class="bar-cell"></th></tr></thead>
+                    <tbody>
+                    {% set max_port = stats.ports[0].count | default(value=1) %}
+                    {% for p in stats.ports %}
+                    <tr>
+                        <td class="num">{{ p.port }}</td>
+                        <td class="num">{{ p.count }}</td>
+                        <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width: {{ (p.count * 100 / max_port) | round }}%"></div></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="section-title">Service Types</div>
+                <table class="stat-table">
+                    <thead><tr><th>Kind</th><th>Count</th><th class="bar-cell"></th></tr></thead>
+                    <tbody>
+                    {% set max_kind = stats.kinds[0].count | default(value=1) %}
+                    {% for k in stats.kinds %}
+                    <tr>
+                        <td>{{ k.kind }}</td>
+                        <td class="num">{{ k.count }}</td>
+                        <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width: {{ (k.count * 100 / max_kind) | round }}%"></div></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <div class="section-title">Top Countries</div>
+                <table class="stat-table">
+                    <thead><tr><th>Country</th><th>Hosts</th><th class="bar-cell"></th></tr></thead>
+                    <tbody>
+                    {% set max_country = stats.countries[0].count | default(value=1) %}
+                    {% for c in stats.countries %}
+                    <tr>
+                        <td>{{ c.country }}</td>
+                        <td class="num">{{ c.count }}</td>
+                        <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width: {{ (c.count * 100 / max_country) | round }}%"></div></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="section-title">Queue Status</div>
+                <div class="queue-status">
+                    {% for q in stats.queues %}
+                    <div class="queue-row">
+                        <div>
+                            <div class="queue-name">{{ q.queue }}</div>
+                            <div class="queue-detail">{{ q.total - q.unclaimed }} processing</div>
+                        </div>
+                        <div class="queue-count">{{ q.unclaimed }} / {{ q.total }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,10 +1,18 @@
 id: ipacct
 name: IPACCT
 category: isp
-tags: [web, isp, billing]
+tags: [isp, billing]
 priority: 80
 matchers:
-  - field: http.title
+  - field: http.body
     op: icontains
     value: IPACCT
     weight: 5
+  - field: http.body
+    op: icontains
+    value: IPBILL
+    weight: 4
+  - field: http.title
+    op: icontains
+    value: IPBILL
+    weight: 4

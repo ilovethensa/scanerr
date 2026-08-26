@@ -1,0 +1,15 @@
+id: nginx-proxy-manager
+name: Nginx Proxy Manager
+category: webapp
+tags: [reverse-proxy, proxy]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: icontains
+    value: Nginx Proxy Manager
+    weight: 5
+  - field: http.body
+    op: contains
+    value: jc21/nginx-proxy-manager
+    weight: 4

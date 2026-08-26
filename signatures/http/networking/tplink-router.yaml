@@ -1,0 +1,10 @@
+id: tplink-router
+name: TP-Link Router
+category: networking
+tags: [router, tplink]
+priority: 85
+matchers:
+  - field: http.body
+    op: contains
+    value: AX80v1
+    weight: 5

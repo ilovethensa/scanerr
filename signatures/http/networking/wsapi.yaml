@@ -1,0 +1,14 @@
+id: wsapi
+name: WSDAPI
+category: networking
+tags: [windows, discovery]
+priority: 80
+matchers:
+  - field: http.header.server
+    op: equals
+    value: Microsoft-HTTPAPI/2.0
+    weight: 5
+  - field: http.title
+    op: equals
+    value: Service Unavailable
+    weight: 3

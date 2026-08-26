@@ -358,6 +358,106 @@ pub async fn api_service(
     }
 }
 
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+struct PortStat {
+    port: i32,
+    count: i64,
+}
+
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+struct KindStat {
+    kind: String,
+    count: i64,
+}
+
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+struct CountryStat {
+    country: String,
+    count: i64,
+}
+
+#[derive(serde::Serialize)]
+struct QueueStat {
+    queue: String,
+    total: i64,
+    unclaimed: i64,
+}
+
+#[derive(serde::Serialize)]
+struct StatsData {
+    total_hosts: i64,
+    total_services: i64,
+    total_countries: i64,
+    ports: Vec<PortStat>,
+    kinds: Vec<KindStat>,
+    countries: Vec<CountryStat>,
+    queues: Vec<QueueStat>,
+}
+
+pub async fn stats(
+    State(state): State<AppState>,
+) -> Result<(StatusCode, HeaderMap, String), StatusCode> {
+    let pool = &state.pool;
+
+    let total_hosts: (i64,) = sqlx::query_as("SELECT count(*) FROM hosts")
+        .fetch_one(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_services: (i64,) = sqlx::query_as("SELECT count(*) FROM services")
+        .fetch_one(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_countries: (i64,) = sqlx::query_as("SELECT count(DISTINCT country_code) FROM hosts WHERE country_code IS NOT NULL")
+        .fetch_one(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let ports: Vec<PortStat> = sqlx::query_as(
+        "SELECT port as port, count(*) as count FROM services GROUP BY port ORDER BY count DESC LIMIT 20"
+    ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let kinds: Vec<KindStat> = sqlx::query_as(
+        "SELECT data->>'kind' as kind, count(*) as count FROM services GROUP BY data->>'kind' ORDER BY count DESC LIMIT 15"
+    ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let countries: Vec<CountryStat> = sqlx::query_as(
+        "SELECT COALESCE(h.country_code, '??') as country, count(*) as count \
+         FROM hosts h GROUP BY h.country_code ORDER BY count DESC LIMIT 15"
+    ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let queues = vec![
+        QueueStat {
+            queue: "host_scans".into(),
+            total: sqlx::query_scalar::<_, i64>("SELECT count(*) FROM queue_host_scans")
+                .fetch_one(pool).await.unwrap_or(0),
+            unclaimed: sqlx::query_scalar::<_, i64>("SELECT count(*) FROM queue_host_scans WHERE claimed_until IS NULL")
+                .fetch_one(pool).await.unwrap_or(0),
+        },
+        QueueStat {
+            queue: "service_probes".into(),
+            total: sqlx::query_scalar::<_, i64>("SELECT count(*) FROM queue_service_probes")
+                .fetch_one(pool).await.unwrap_or(0),
+            unclaimed: sqlx::query_scalar::<_, i64>("SELECT count(*) FROM queue_service_probes WHERE claimed_until IS NULL")
+                .fetch_one(pool).await.unwrap_or(0),
+        },
+    ];
+
+    let data = StatsData {
+        total_hosts: total_hosts.0,
+        total_services: total_services.0,
+        total_countries: total_countries.0,
+        ports,
+        kinds,
+        countries,
+        queues,
+    };
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("title", "scanerr - Statistics");
+    ctx.insert("stats", &data);
+
+    let body = state.tera.render("stats.html", &ctx)
+        .map_err(|e| {
+            tracing::error!("stats render failed: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    Ok(html_response(body))
+}
+
 type ServiceRow = (i64, i32, String, Option<String>, Value, i64, i64, String, Option<String>, Option<i32>, Option<String>);
 
 #[derive(Debug, Clone, sqlx::FromRow, serde::Serialize)]

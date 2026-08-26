@@ -7,6 +7,7 @@ pub mod imap;
 pub mod mikrotik;
 pub mod mqtt;
 pub mod mysql;
+pub mod pop3;
 pub mod pptp;
 pub mod raw;
 pub mod rndns;

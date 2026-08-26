@@ -46,6 +46,8 @@ services:
       - NET_RAW
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
+    deploy:
+      replicas: 5
 
   probe:
     image: scanerr-app

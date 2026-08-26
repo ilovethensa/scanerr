@@ -1,0 +1,15 @@
+id: unifi-os
+name: UniFi OS
+category: networking
+tags: [router, ubiquiti, unifi]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: UNIFI_OS_MANIFEST
+    weight: 6
+  - field: http.title
+    op: equals
+    value: UniFi OS
+    weight: 4

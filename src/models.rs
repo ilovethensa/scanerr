@@ -15,6 +15,7 @@ pub enum Protocol {
     Ftp,
     Smtp,
     Imap,
+    Pop3,
     Mqtt,
     Mysql,
     Redis,
@@ -35,6 +36,7 @@ impl Protocol {
             Protocol::Ftp => "ftp",
             Protocol::Smtp => "smtp",
             Protocol::Imap => "imap",
+            Protocol::Pop3 => "pop3",
             Protocol::Mqtt => "mqtt",
             Protocol::Mysql => "mysql",
             Protocol::Redis => "redis",
@@ -69,6 +71,7 @@ impl From<&str> for Protocol {
             "ftp" => Protocol::Ftp,
             "smtp" => Protocol::Smtp,
             "imap" => Protocol::Imap,
+            "pop3" => Protocol::Pop3,
             "mqtt" => Protocol::Mqtt,
             "mysql" => Protocol::Mysql,
             "redis" => Protocol::Redis,
@@ -86,6 +89,8 @@ impl From<&str> for Protocol {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServiceData {
     pub kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub port: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub product: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -114,6 +119,8 @@ pub struct ServiceData {
     pub mikrotik: Option<MikrotikData>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rtsp: Option<RtspData>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pop3: Option<Pop3Data>,
 }
 
 // ─── Protocol Payloads ────────────────────────────────────────────────────────
@@ -230,6 +237,17 @@ pub struct RtspData {
     pub server: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub frame_sha256: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Pop3Data {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub banner: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub server: Option<String>,
+    pub capabilities: Vec<String>,
 }
 
 // ─── Row types for DB ─────────────────────────────────────────────────────────
@@ -301,6 +319,7 @@ impl Default for ServiceData {
     fn default() -> Self {
         Self {
             kind: "unknown".into(),
+            port: None,
             product: None,
             version: None,
             confidence: None,
@@ -315,6 +334,7 @@ impl Default for ServiceData {
             sccp: None,
             mikrotik: None,
             rtsp: None,
+            pop3: None,
         }
     }
 }

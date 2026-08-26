@@ -1,0 +1,14 @@
+id: mdaemon-webmail
+name: MDaemon Webmail
+category: mail
+tags: [mail, webmail]
+priority: 85
+matchers:
+  - field: http.title
+    op: icontains
+    value: MDaemon Webmail
+    weight: 8
+  - field: http.body
+    op: contains
+    value: WorldClient.dll
+    weight: 6

@@ -1,0 +1,19 @@
+id: osticket
+name: osTicket
+category: webapp
+tags: [helpdesk, ticketing]
+priority: 85
+condition: any
+matchers:
+  - field: http.header.set-cookie
+    op: startswith
+    value: OSTSESSID=
+    weight: 5
+  - field: http.body
+    op: icontains
+    value: osticket.css
+    weight: 4
+  - field: http.body
+    op: icontains
+    value: support ticket system
+    weight: 3

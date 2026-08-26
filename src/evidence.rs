@@ -35,6 +35,7 @@ impl From<&ServiceData> for Evidence {
 
         // Common fields
         push(&mut m, "kind", &d.kind);
+        if let Some(p) = d.port { push(&mut m, "port", &p.to_string()); }
         if let Some(ref v) = d.product { push(&mut m, "product", v); }
         if let Some(ref v) = d.version { push(&mut m, "version", v); }
         if let Some(ref v) = d.banner  { push(&mut m, "banner",  v); }

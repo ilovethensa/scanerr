@@ -17,3 +17,15 @@ matchers:
     op: contains
     value: /doc/page/login.asp
     weight: 4
+  - field: http.body
+    op: contains
+    value: multiVideoActiveX
+    weight: 8
+  - field: http.body
+    op: contains
+    value: PluginEventHandler
+    weight: 6
+  - field: http.body
+    op: icontains
+    value: childDevID
+    weight: 3

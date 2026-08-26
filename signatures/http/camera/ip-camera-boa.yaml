@@ -1,0 +1,15 @@
+id: ip-camera-boa
+name: IP Camera
+category: camera
+tags: [camera, surveillance, iot]
+priority: 90
+condition: all
+matchers:
+  - field: http.header.www-authenticate
+    op: icontains
+    value: N2v2
+    weight: 5
+  - field: http.header.server
+    op: startswith
+    value: Boa/
+    weight: 3

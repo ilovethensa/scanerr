@@ -1,0 +1,10 @@
+id: openresty
+name: OpenResty
+category: webapp
+tags: [reverse-proxy, nginx]
+priority: 70
+matchers:
+  - field: http.header.server
+    op: icontains
+    value: openresty
+    weight: 5

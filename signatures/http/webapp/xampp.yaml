@@ -1,0 +1,15 @@
+id: xampp
+name: XAMPP
+category: webapp
+tags: [development, php]
+priority: 85
+condition: any
+matchers:
+  - field: http.title
+    op: icontains
+    value: XAMPP
+    weight: 5
+  - field: http.body
+    op: icontains
+    value: apachefriends
+    weight: 4

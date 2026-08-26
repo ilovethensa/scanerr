@@ -4,7 +4,7 @@ use tokio::net::TcpStream;
 
 use crate::models::{Protocol, ServiceData};
 
-use super::{ftp, imap, mikrotik, mqtt, mysql, pptp, rtsp, sccp, smtp, ssh};
+use super::{ftp, imap, mikrotik, mqtt, mysql, pop3, pptp, rtsp, sccp, smtp, ssh};
 
 /// Trait implemented by each protocol detector.
 pub trait ProtocolProbe {
@@ -37,6 +37,7 @@ pub enum ProbeKind {
     Ssh(ssh::SshProbe),
     Smtp(smtp::SmtpProbe),
     Imap(imap::ImapProbe),
+    Pop3(pop3::Pop3Probe),
     Mysql(mysql::MysqlProbe),
     Pptp(pptp::PptpProbe),
     Mqtt(mqtt::MqttProbe),
@@ -52,6 +53,7 @@ impl ProtocolProbe for ProbeKind {
             Self::Ssh(p) => p.protocol(),
             Self::Smtp(p) => p.protocol(),
             Self::Imap(p) => p.protocol(),
+            Self::Pop3(p) => p.protocol(),
             Self::Mysql(p) => p.protocol(),
             Self::Pptp(p) => p.protocol(),
             Self::Mqtt(p) => p.protocol(),
@@ -67,6 +69,7 @@ impl ProtocolProbe for ProbeKind {
             Self::Ssh(p) => p.requires_probe_without_banner(),
             Self::Smtp(p) => p.requires_probe_without_banner(),
             Self::Imap(p) => p.requires_probe_without_banner(),
+            Self::Pop3(p) => p.requires_probe_without_banner(),
             Self::Mysql(p) => p.requires_probe_without_banner(),
             Self::Pptp(p) => p.requires_probe_without_banner(),
             Self::Mqtt(p) => p.requires_probe_without_banner(),
@@ -82,6 +85,7 @@ impl ProtocolProbe for ProbeKind {
             Self::Ssh(p) => p.detects_banner(bytes),
             Self::Smtp(p) => p.detects_banner(bytes),
             Self::Imap(p) => p.detects_banner(bytes),
+            Self::Pop3(p) => p.detects_banner(bytes),
             Self::Mysql(p) => p.detects_banner(bytes),
             Self::Pptp(p) => p.detects_banner(bytes),
             Self::Mqtt(p) => p.detects_banner(bytes),
@@ -97,6 +101,7 @@ impl ProtocolProbe for ProbeKind {
             Self::Ssh(p) => p.probe(ip, port, banner, user_agent).await,
             Self::Smtp(p) => p.probe(ip, port, banner, user_agent).await,
             Self::Imap(p) => p.probe(ip, port, banner, user_agent).await,
+            Self::Pop3(p) => p.probe(ip, port, banner, user_agent).await,
             Self::Mysql(p) => p.probe(ip, port, banner, user_agent).await,
             Self::Pptp(p) => p.probe(ip, port, banner, user_agent).await,
             Self::Mqtt(p) => p.probe(ip, port, banner, user_agent).await,
@@ -121,6 +126,7 @@ impl ProbeRegistry {
                 ProbeKind::Ftp(ftp::FtpProbe),
                 ProbeKind::Smtp(smtp::SmtpProbe),
                 ProbeKind::Imap(imap::ImapProbe),
+                ProbeKind::Pop3(pop3::Pop3Probe),
                 ProbeKind::Mysql(mysql::MysqlProbe),
                 ProbeKind::Pptp(pptp::PptpProbe),
                 ProbeKind::Mqtt(mqtt::MqttProbe),
@@ -185,6 +191,7 @@ fn probe_priority(proto: Protocol) -> u32 {
         Protocol::Ftp   => 90,
         Protocol::Smtp  => 90,
         Protocol::Imap  => 80,
+        Protocol::Pop3  => 80,
         Protocol::Mysql => 80,
         Protocol::Pptp  => 60,
         Protocol::Mqtt  => 60,

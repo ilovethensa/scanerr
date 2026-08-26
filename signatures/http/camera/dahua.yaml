@@ -13,6 +13,10 @@ matchers:
     op: equals
     value: DNVRS-Webs
     weight: 5
+  - field: http.header.server
+    op: equals
+    value: DVRDVS-Webs
+    weight: 5
   - field: http.body
     op: contains
     value: /IEpolyfill.min.js

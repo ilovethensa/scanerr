@@ -16,7 +16,7 @@ env_logger = "0.11"
 ipnet = "2"
 log = "0.4"
 maxminddb = "0.24"
-reqwest = { version = "0.12", features = ["rustls-tls", "json"], default-features = false }
+reqwest = { version = "0.12", features = ["rustls-tls", "json", "gzip"], default-features = false }
 regex = "1"
 rustls = { version = "0.23", features = ["ring"] }
 serde = { version = "1", features = ["derive"] }

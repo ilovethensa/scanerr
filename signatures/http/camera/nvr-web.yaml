@@ -1,0 +1,15 @@
+id: nvr-web
+name: NVR/DVR Web Interface
+category: camera
+tags: [camera, surveillance, iot, nvr]
+priority: 85
+condition: all
+matchers:
+  - field: http.body
+    op: contains
+    value: SD-GAUSS
+    weight: 6
+  - field: http.body
+    op: contains
+    value: PlatformConfig-GAVI
+    weight: 4

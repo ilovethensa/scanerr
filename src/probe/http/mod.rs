@@ -69,32 +69,40 @@ pub async fn probe_http(scheme: &str, ip: &str, port: u16, user_agent: &str) -> 
 
     // Follow JavaScript redirects (e.g. Huawei's document.location.href)
     let body_text = if let Some(js_url) = extract_js_redirect(&body_text) {
-        let redirect_url = if js_url.starts_with("http") {
-            js_url
+        let urls = if js_url.starts_with("http") {
+            vec![js_url]
         } else if js_url.starts_with("//") {
-            format!("https:{}", js_url)
+            vec![format!("{}:{}", scheme, js_url)]
         } else if js_url.starts_with('/') {
-            format!("https://{}:{}", ip, port) + &js_url
+            let http_url = format!("http://{}:{}", ip, port) + &js_url;
+            let https_port = if port == 80 { 443 } else { port };
+            let https_url = format!("https://{}:{}", ip, https_port) + &js_url;
+            if scheme == "http" { vec![http_url, https_url] } else { vec![https_url] }
         } else {
-            format!("https://{}:{}/", ip, port) + &js_url
+            let http_url = format!("http://{}:{}/", ip, port) + &js_url;
+            let https_port = if port == 80 { 443 } else { port };
+            let https_url = format!("https://{}:{}/", ip, https_port) + &js_url;
+            if scheme == "http" { vec![http_url, https_url] } else { vec![https_url] }
         };
-        if let Ok(Ok(redirect_resp)) = tokio::time::timeout(
-            std::time::Duration::from_secs(5),
-            client.get(&redirect_url).send(),
-        ).await {
-            let redirect_status = redirect_resp.status().as_u16();
-            if redirect_status == 200 {
-                if let Ok(redirect_body) = redirect_resp.bytes().await {
-                    String::from_utf8_lossy(&redirect_body).replace('\0', "")
-                } else {
-                    body_text
+        let mut redirected_body = body_text;
+        for url in &urls {
+            if let Ok(Ok(redirect_resp)) = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                client.get(url.as_str()).send(),
+            ).await {
+                let redirect_status = redirect_resp.status().as_u16();
+                if redirect_status == 200 {
+                    if let Ok(redirect_body) = redirect_resp.bytes().await {
+                        let text = String::from_utf8_lossy(&redirect_body).replace('\0', "");
+                        if !text.is_empty() {
+                            redirected_body = text;
+                            break;
+                        }
+                    }
                 }
-            } else {
-                body_text
             }
-        } else {
-            body_text
         }
+        redirected_body
     } else {
         body_text
     };
@@ -289,11 +297,16 @@ fn extract_js_redirect(body: &str) -> Option<String> {
     if let Some(caps) = concat.captures(body) {
         return Some(caps[1].to_string());
     }
+    // Match meta refresh: <meta http-equiv="refresh" content="0; URL=/path">
+    let meta = regex::Regex::new(r#"content\s*=\s*["']\d+\s*;\s*URL=([^"']+)["']"#).ok()?;
+    if let Some(caps) = meta.captures(body) {
+        return Some(caps[1].to_string());
+    }
     // Match simple: document.location.href = "relogin.asp"
     let simple = regex::Regex::new(r#"document\.location\.href\s*=\s*["']([^"']+)["']"#).ok()?;
     if let Some(caps) = simple.captures(body) {
         let url = caps[1].to_string();
-        if url.contains("relogin") || url.contains("login") {
+        if url.contains("relogin") || url.contains("login") || url.starts_with("/doc/") {
             return Some(url);
         }
     }

@@ -1,0 +1,10 @@
+id: pritunl
+name: Pritunl
+category: vpn
+tags: [vpn, security]
+priority: 85
+matchers:
+  - field: http.title
+    op: equals
+    value: Pritunl
+    weight: 5

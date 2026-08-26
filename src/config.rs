@@ -25,7 +25,7 @@ pub struct DatabaseConfig {
 pub struct ScannerConfig {
     pub discovery_ports: Vec<u16>,
     pub discovery_rate: u32,
-    pub deep_scan_ports: Vec<u16>,
+    pub deep_scan_ports: Vec<String>,
     pub deep_scan_rate: u32,
     pub max_probe_queue_depth: u32,
     #[serde(default)]
@@ -37,6 +37,36 @@ pub struct ScannerConfig {
 
 fn default_sweep_chunk_size() -> usize {
     20
+}
+
+pub fn expand_port_ranges(specs: &[String]) -> Vec<u16> {
+    let mut ports = Vec::new();
+    for spec in specs {
+        for part in spec.split(|c| c == ',' || c == ' ') {
+            let part = part.trim();
+            if part.is_empty() {
+                continue;
+            }
+            if let Some((start, end)) = part.split_once('-') {
+                if let (Ok(s), Ok(e)) = (start.trim().parse::<u16>(), end.trim().parse::<u16>()) {
+                    for p in s..=e {
+                        ports.push(p);
+                    }
+                }
+            } else if let Ok(p) = part.parse::<u16>() {
+                ports.push(p);
+            }
+        }
+    }
+    ports.sort();
+    ports.dedup();
+    ports
+}
+
+impl ScannerConfig {
+    pub fn expanded_deep_ports(&self) -> Vec<u16> {
+        expand_port_ranges(&self.deep_scan_ports)
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -112,8 +142,7 @@ impl Default for Config {
                 discovery_ports: vec![22, 80, 443],
                 discovery_rate: 10000,
                 deep_scan_ports: vec![
-                    21, 22, 23, 25, 53, 80, 110, 143, 443, 445, 587, 993, 995, 1723, 3306,
-                    3389, 5432, 6379, 8080, 8443,
+                    "1-1024".into(),
                 ],
                 deep_scan_rate: 500,
                 max_probe_queue_depth: 50000,

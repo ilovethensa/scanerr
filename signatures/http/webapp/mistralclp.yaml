@@ -1,0 +1,14 @@
+id: mistralclp
+name: MistralClp
+category: webapp
+tags: [accounting, bulgaria]
+priority: 85
+matchers:
+  - field: http.title
+    op: icontains
+    value: MistralClp
+    weight: 8
+  - field: http.body
+    op: icontains
+    value: MistralClp
+    weight: 6

@@ -1,0 +1,15 @@
+id: routeros
+name: MikroTik RouterOS
+category: networking
+tags: [router, mikrotik]
+priority: 85
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: RouterOS
+    weight: 5
+  - field: http.body
+    op: icontains
+    value: mikrotik_logo
+    weight: 4

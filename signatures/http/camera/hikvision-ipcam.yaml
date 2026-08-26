@@ -1,0 +1,15 @@
+id: hikvision-ipcam
+name: Hikvision IPCam
+category: camera
+tags: [camera, surveillance, iot]
+priority: 80
+condition: all
+matchers:
+  - field: port
+    op: equals
+    value: "8001"
+    weight: 5
+  - field: kind
+    op: equals
+    value: unknown
+    weight: 1

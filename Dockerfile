@@ -1,36 +1,43 @@
-FROM rust:1.85-slim AS builder
-
-RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
-
+## syntax=docker/dockerfile:1
+FROM rust:1-bookworm AS chef
+RUN cargo install cargo-chef --locked
 WORKDIR /app
 
-# Cache dependencies: copy manifests + dummy src so cargo resolves all deps
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && echo 'fn main() {}' > src/main.rs && echo 'pub mod config; pub mod db; pub mod queue; pub mod models; pub mod masscan; pub mod probe; pub mod fingerprint; pub mod evidence; pub mod enrich; pub mod query; pub mod serve;' > src/lib.rs
-RUN mkdir -p src/probe src/probe/http src/enrich src/serve src/fingerprint
-RUN touch src/probe/mod.rs src/enrich/mod.rs src/serve/mod.rs
-RUN touch src/probe/http/mod.rs src/probe/http/parse.rs src/probe/http/tech.rs
-RUN touch src/fingerprint/mod.rs src/fingerprint/signature.rs src/fingerprint/loader.rs src/fingerprint/score.rs
-RUN cargo build --release 2>/dev/null || true
-RUN rm -rf src
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Copy real source and rebuild (only recompiles our code, deps are cached)
-COPY src ./src
-COPY migrations ./migrations
-COPY templates ./templates
-COPY signatures ./signatures
-RUN cargo build --release
+FROM chef AS builder
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+        pkg-config libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
+COPY --from=planner /app/recipe.json recipe.json
+
+# Cache only dependencies
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
+    cargo chef cook --release --recipe-path recipe.json
+
+# Now copy real source and build
+COPY . .
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    --mount=type=cache,target=/app/target,sharing=locked \
+    cargo build --release \
+    && cp /app/target/release/scanerr /usr/local/bin/scanerr
+
+# Runtime stage (unchanged)
 FROM debian:bookworm-slim
-
 RUN apt-get update && \
-    apt-get install -y ca-certificates masscan libpcap0.8 && \
+    apt-get install -y --no-install-recommends ca-certificates masscan libpcap0.8 && \
     rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /app/target/release/scanerr /usr/local/bin/
+COPY --from=builder /usr/local/bin/scanerr /usr/local/bin/
 COPY --from=builder /app/templates /app/templates
 COPY --from=builder /app/signatures /app/signatures
-
 WORKDIR /app
 ENTRYPOINT ["scanerr"]
 CMD ["all"]

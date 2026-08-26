@@ -25,6 +25,19 @@ pub async fn probe(
     engine: &Engine,
 ) -> Result<ProbeResult> {
     let clean_ip = ip_str.split('/').next().unwrap_or(ip_str);
+
+    let registry = engine::ProbeRegistry::new();
+    let mut data = match registry.dispatch(clean_ip, port, _user_agent).await {
+        Ok(d) => d,
+        Err(e) => {
+            anyhow::bail!("probe dispatch failed for {}:{}: {}", clean_ip, port, e);
+        }
+    };
+    data.port = Some(port);
+
+    engine.identify(&mut data);
+
+    // Only create/update the host after a successful probe
     let host_id = ensure_host(pool, clean_ip).await?;
 
     let rndns_result = rndns::resolve(clean_ip).await.unwrap_or(None);
@@ -50,17 +63,6 @@ pub async fn probe(
         }
     }
 
-    let registry = engine::ProbeRegistry::new();
-    let mut data = match registry.dispatch(clean_ip, port, _user_agent).await {
-        Ok(d) => d,
-        Err(e) => {
-            tracing::warn!("probe dispatch failed for {}:{}: {}", clean_ip, port, e);
-            ServiceData::default()
-        }
-    };
-
-    engine.identify(&mut data);
-
     Ok(ProbeResult {
         host_id,
         ip: clean_ip.to_string(),
@@ -81,6 +83,7 @@ pub async fn probe_standalone(
     let clean_ip = ip_str.split('/').next().unwrap_or(ip_str);
     let registry = engine::ProbeRegistry::new();
     let mut data = registry.dispatch(clean_ip, port, user_agent).await?;
+    data.port = Some(port);
     engine.identify(&mut data);
     Ok(data)
 }
@@ -150,6 +153,9 @@ pub async fn maybe_enqueue_enrichments(
 ) -> Result<()> {
     if data.http.is_some() {
         crate::queue::insert_enrichment(pool, service_id, "favicon", now()).await?;
+    }
+    if data.rtsp.is_some() {
+        crate::queue::insert_enrichment(pool, service_id, "rtsp_frame", now()).await?;
     }
     Ok(())
 }

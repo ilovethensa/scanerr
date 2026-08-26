@@ -1,0 +1,19 @@
+id: cacti
+name: Cacti
+category: monitoring
+tags: [monitoring, graphing]
+priority: 85
+condition: any
+matchers:
+  - field: http.title
+    op: icontains
+    value: Cacti
+    weight: 5
+  - field: http.body
+    op: contains
+    value: /cacti/
+    weight: 4
+  - field: http.header.set-cookie
+    op: startswith
+    value: Cacti=
+    weight: 4

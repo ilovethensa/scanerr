@@ -51,8 +51,9 @@ src/
 │   ├── rndns.rs             # Reverse DNS resolver (placeholder)
 │   └── raw.rs               # Raw banner capture with basic SSH/FTP detection
 ├── enrich/
-│   ├── mod.rs               # Enrichment dispatcher (Favicon kind)
-│   └── favicon.rs           # Favicon fetch + SHA256 + mmh3 hash (Shodan-compatible)
+│   ├── mod.rs               # Enrichment dispatcher (Favicon, RtspFrame kinds)
+│   ├── favicon.rs           # Favicon fetch + SHA256 + mmh3 hash (Shodan-compatible)
+│   └── rtsp_frame.rs        # RTSP frame capture via ffmpeg subprocess
 └── serve/
     ├── mod.rs               # Axum router: index, search, host, service, JSON API routes
     ├── routes.rs            # Route handlers: index, search, host detail, service detail

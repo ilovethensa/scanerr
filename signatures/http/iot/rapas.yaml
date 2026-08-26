@@ -1,0 +1,15 @@
+id: rapas
+name: Rapas
+category: iot
+tags: [gps, tracking, fleet-management]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: icontains
+    value: gpssystem
+    weight: 5
+  - field: http.title
+    op: icontains
+    value: Rapas
+    weight: 4

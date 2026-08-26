@@ -1,0 +1,10 @@
+id: boa
+name: Boa Web Server
+category: iot
+tags: [iot, embedded]
+priority: 50
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: Boa/
+    weight: 5

@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
     // Test commands that don't need DB
     match &cli.command {
         Commands::TestScan { ip } => {
-            let ports = config.scanner.deep_scan_ports.clone();
+            let ports = config.scanner.expanded_deep_ports();
             let rate = config.scanner.deep_scan_rate;
             let results = masscan::run_stage2(ip, &ports, rate)?;
             for r in &results {
@@ -187,7 +187,7 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
     info!("Starting deep scan...");
 
     let host_queue = queue::LeasedQueue::new("queue_host_scans");
-    let ports = config.scanner.deep_scan_ports.clone();
+    let ports = config.scanner.expanded_deep_ports();
     let rate = config.scanner.deep_scan_rate;
 
     let now = || {
@@ -317,6 +317,7 @@ async fn run_enrich(pool: PgPool, config: config::Config) -> Result<()> {
 
             let enricher = match kind.as_str() {
                 "favicon" => Some(enrich::EnricherKind::Favicon),
+                "rtsp_frame" => Some(enrich::EnricherKind::RtspFrame),
                 _ => None,
             };
 

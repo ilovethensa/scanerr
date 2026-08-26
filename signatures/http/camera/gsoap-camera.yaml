@@ -1,0 +1,14 @@
+id: gsoap-camera
+name: IP Camera (gSOAP)
+category: camera
+tags: [camera, iot]
+priority: 85
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: gSOAP
+    weight: 6
+  - field: http.body
+    op: contains
+    value: Pages/login.htm
+    weight: 5

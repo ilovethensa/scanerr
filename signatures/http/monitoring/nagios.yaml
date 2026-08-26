@@ -1,0 +1,10 @@
+id: nagios
+name: Nagios
+category: monitoring
+tags: [monitoring, alerting]
+priority: 85
+matchers:
+  - field: http.header.www-authenticate
+    op: icontains
+    value: "Nagios"
+    weight: 5

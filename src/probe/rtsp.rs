@@ -104,7 +104,7 @@ async fn probe_rtsp(ip: &str, port: u16) -> Result<ServiceData> {
 
     data.banner = Some(format!("RTSP/1.0 {}", status_code));
 
-    data.rtsp = Some(RtspData { server, public });
+    data.rtsp = Some(RtspData { server, public, frame_sha256: None });
 
     Ok(data)
 }

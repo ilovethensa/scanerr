@@ -1,0 +1,19 @@
+id: kong
+name: Kong
+category: api-gateway
+tags: [api-gateway, reverse-proxy]
+priority: 85
+condition: any
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: kong/
+    weight: 5
+  - field: http.header.x-kong-response-latency
+    op: exists
+    value: "1"
+    weight: 4
+  - field: http.body
+    op: icontains
+    value: ring-balancer
+    weight: 3
