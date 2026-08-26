@@ -148,6 +148,17 @@ pub async fn upsert_service(pool: &PgPool, result: &ProbeResult) -> Result<i64> 
     .bind(t)
     .fetch_one(pool)
     .await?;
+
+    // Check if this host now has >50 services → mark as honeypot
+    sqlx::query(
+        "UPDATE hosts SET is_honeypot = true
+         WHERE id = $1 AND is_honeypot = false
+         AND (SELECT count(*)::int FROM services WHERE host_id = $1) > 50",
+    )
+    .bind(result.host_id)
+    .execute(pool)
+    .await?;
+
     Ok(row.0)
 }
 

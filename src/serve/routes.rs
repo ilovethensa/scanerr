@@ -37,7 +37,7 @@ pub async fn index(State(state): State<AppState>) -> Result<(StatusCode, HeaderM
                    ) ORDER BY s.port) \
                    FROM services s WHERE s.host_id = h.id \
                ), '[]'::jsonb) as services \
-               FROM hosts h ORDER BY h.last_seen DESC LIMIT 50";
+               FROM hosts h WHERE NOT h.is_honeypot ORDER BY h.last_seen DESC LIMIT 50";
 
     let mut hosts: Vec<HostSummary> = sqlx::query_as(sql)
         .fetch_all(&state.pool)
@@ -471,6 +471,8 @@ pub struct HostSummary {
     pub first_seen: i64,
     pub last_seen: i64,
     pub service_count: Option<i32>,
+    #[sqlx(default)]
+    pub is_honeypot: bool,
     #[sqlx(default)]
     pub tags: Option<Vec<String>>,
     #[sqlx(default)]
