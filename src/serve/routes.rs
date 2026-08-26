@@ -399,24 +399,30 @@ pub async fn stats(
 ) -> Result<(StatusCode, HeaderMap, String), StatusCode> {
     let pool = &state.pool;
 
-    let total_hosts: (i64,) = sqlx::query_as("SELECT count(*) FROM hosts")
+    let total_hosts: (i64,) = sqlx::query_as("SELECT count(*) FROM hosts WHERE NOT is_honeypot")
         .fetch_one(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let total_services: (i64,) = sqlx::query_as("SELECT count(*) FROM services")
+    let total_services: (i64,) = sqlx::query_as(
+        "SELECT count(*) FROM services s JOIN hosts h ON s.host_id = h.id WHERE NOT h.is_honeypot")
         .fetch_one(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let total_countries: (i64,) = sqlx::query_as("SELECT count(DISTINCT country_code) FROM hosts WHERE country_code IS NOT NULL")
+    let total_countries: (i64,) = sqlx::query_as(
+        "SELECT count(DISTINCT country_code) FROM hosts WHERE country_code IS NOT NULL AND NOT is_honeypot")
         .fetch_one(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let ports: Vec<PortStat> = sqlx::query_as(
-        "SELECT port as port, count(*) as count FROM services GROUP BY port ORDER BY count DESC LIMIT 20"
+        "SELECT s.port as port, count(*) as count FROM services s \
+         JOIN hosts h ON s.host_id = h.id WHERE NOT h.is_honeypot \
+         GROUP BY s.port ORDER BY count DESC LIMIT 20"
     ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let kinds: Vec<KindStat> = sqlx::query_as(
-        "SELECT data->>'kind' as kind, count(*) as count FROM services GROUP BY data->>'kind' ORDER BY count DESC LIMIT 15"
+        "SELECT s.data->>'kind' as kind, count(*) as count FROM services s \
+         JOIN hosts h ON s.host_id = h.id WHERE NOT h.is_honeypot \
+         GROUP BY s.data->>'kind' ORDER BY count DESC LIMIT 15"
     ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let countries: Vec<CountryStat> = sqlx::query_as(
         "SELECT COALESCE(h.country_code, '??') as country, count(*) as count \
-         FROM hosts h GROUP BY h.country_code ORDER BY count DESC LIMIT 15"
+         FROM hosts h WHERE NOT h.is_honeypot GROUP BY h.country_code ORDER BY count DESC LIMIT 15"
     ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let queues = vec![
