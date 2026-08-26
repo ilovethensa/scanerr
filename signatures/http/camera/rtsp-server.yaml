@@ -1,0 +1,15 @@
+id: rtsp-server
+name: RTSP Camera Server
+category: camera
+tags: [camera, surveillance, iot, rtsp]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: contains
+    value: RTSP
+    weight: 7
+  - field: http.header.content-type
+    op: equals
+    value: application/x-rtsp-tunnelled
+    weight: 8

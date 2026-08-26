@@ -27,7 +27,7 @@ impl ProtocolProbe for RtspProbe {
 /// Sends an OPTIONS request and parses Server/Public headers from the response.
 async fn probe_rtsp(ip: &str, port: u16) -> Result<ServiceData> {
     let mut stream = tokio::time::timeout(
-        std::time::Duration::from_secs(3),
+        std::time::Duration::from_secs(5),
         TcpStream::connect(format!("{}:{}", ip, port)),
     )
     .await

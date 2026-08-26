@@ -4,7 +4,7 @@ use tokio::net::TcpStream;
 
 use crate::models::{Protocol, ServiceData};
 
-use super::{ftp, imap, mikrotik, mqtt, mysql, pop3, pptp, rtsp, sccp, smtp, ssh, telnet};
+use super::{bgp, ftp, hikvision, imap, mikrotik, mqtt, mysql, pop3, pptp, rtsp, sccp, smtp, ssh, telnet};
 
 /// Trait implemented by each protocol detector.
 pub trait ProtocolProbe {
@@ -45,6 +45,8 @@ pub enum ProbeKind {
     Sccp(sccp::SccpProbe),
     Mikrotik(mikrotik::MikrotikProbe),
     Rtsp(rtsp::RtspProbe),
+    Bgp(bgp::BgpProbe),
+    Hikvision(hikvision::HikvisionProbe),
 }
 
 impl ProtocolProbe for ProbeKind {
@@ -62,6 +64,8 @@ impl ProtocolProbe for ProbeKind {
             Self::Sccp(p) => p.protocol(),
             Self::Mikrotik(p) => p.protocol(),
             Self::Rtsp(p) => p.protocol(),
+            Self::Bgp(p) => p.protocol(),
+            Self::Hikvision(p) => p.protocol(),
         }
     }
 
@@ -79,6 +83,8 @@ impl ProtocolProbe for ProbeKind {
             Self::Sccp(p) => p.requires_probe_without_banner(),
             Self::Mikrotik(p) => p.requires_probe_without_banner(),
             Self::Rtsp(p) => p.requires_probe_without_banner(),
+            Self::Bgp(p) => p.requires_probe_without_banner(),
+            Self::Hikvision(p) => p.requires_probe_without_banner(),
         }
     }
 
@@ -96,6 +102,8 @@ impl ProtocolProbe for ProbeKind {
             Self::Sccp(p) => p.detects_banner(bytes),
             Self::Mikrotik(p) => p.detects_banner(bytes),
             Self::Rtsp(p) => p.detects_banner(bytes),
+            Self::Bgp(p) => p.detects_banner(bytes),
+            Self::Hikvision(p) => p.detects_banner(bytes),
         }
     }
 
@@ -113,6 +121,8 @@ impl ProtocolProbe for ProbeKind {
             Self::Sccp(p) => p.probe(ip, port, banner, user_agent).await,
             Self::Mikrotik(p) => p.probe(ip, port, banner, user_agent).await,
             Self::Rtsp(p) => p.probe(ip, port, banner, user_agent).await,
+            Self::Bgp(p) => p.probe(ip, port, banner, user_agent).await,
+            Self::Hikvision(p) => p.probe(ip, port, banner, user_agent).await,
         }
     }
 }
@@ -139,6 +149,8 @@ impl ProbeRegistry {
                 ProbeKind::Sccp(sccp::SccpProbe),
                 ProbeKind::Mikrotik(mikrotik::MikrotikProbe),
                 ProbeKind::Rtsp(rtsp::RtspProbe),
+                ProbeKind::Bgp(bgp::BgpProbe),
+                ProbeKind::Hikvision(hikvision::HikvisionProbe),
             ],
         }
     }
@@ -151,7 +163,16 @@ impl ProbeRegistry {
         user_agent: &str,
     ) -> Result<ServiceData> {
         // 1. Connect and read banner
-        let banner = read_banner(ip, port).await.unwrap_or_default();
+        let connect_result = read_banner(ip, port).await;
+        let banner = match connect_result {
+            Ok(b) => b,
+            Err(_) => {
+                // Connection refused or timed out — port is firewalled
+                let mut data = ServiceData::default();
+                data.kind = "firewalled".into();
+                return Ok(data);
+            }
+        };
 
         // 2. Run every probe's `detects_banner` over the captured bytes
         if !banner.is_empty() {
@@ -205,6 +226,8 @@ fn probe_priority(proto: Protocol) -> u32 {
         Protocol::Sccp  => 60,
         Protocol::Mikrotik => 70,
         Protocol::Rtsp    => 70,
+        Protocol::Bgp     => 50,
+        Protocol::Hikvision => 65,
         _ => 0,
     }
 }

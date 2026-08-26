@@ -19,7 +19,13 @@ impl ProtocolProbe for TelnetProbe {
     }
 
     async fn probe(&self, ip: &str, port: u16, _banner: &[u8], _ua: &str) -> Result<ServiceData> {
-        let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).await?;
+        let mut stream = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            TcpStream::connect(format!("{}:{}", ip, port)),
+        )
+        .await
+        .map_err(|_| anyhow::anyhow!("telnet connect timeout"))?
+        .map_err(|e| anyhow::anyhow!("telnet connect failed: {}", e))?;
         stream.set_nodelay(true)?;
 
         let mut buf = [0u8; 4096];
@@ -35,6 +41,17 @@ impl ProtocolProbe for TelnetProbe {
         // Must have some data to confirm it's telnet
         if text.is_empty() {
             anyhow::bail!("no telnet banner received");
+        }
+
+        // Reject binary responses (TIME protocol, etc.)
+        if buf[..n].iter().any(|&b| b == 0) {
+            anyhow::bail!("binary response, not telnet");
+        }
+
+        // Must contain telnet-like text
+        if !text.contains("login") && !text.contains("Password") && !text.contains("Welcome")
+            && !text.contains("prompt") && !text.contains("Escape") && !text.contains("telnet") {
+            anyhow::bail!("no telnet markers in: {}", text.chars().take(40).collect::<String>());
         }
 
         let mut data = ServiceData::default();
