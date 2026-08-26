@@ -1,0 +1,15 @@
+id: peplink
+name: Peplink Router
+category: networking
+tags: [router, networking, iot]
+priority: 85
+condition: any
+matchers:
+  - field: http.header.content-security-policy
+    op: contains
+    value: peplink.com
+    weight: 10
+  - field: http.body
+    op: contains
+    value: /cgi-bin/MANGA/
+    weight: 8

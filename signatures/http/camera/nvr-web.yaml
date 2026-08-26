@@ -3,7 +3,7 @@ name: NVR/DVR Web Interface
 category: camera
 tags: [camera, surveillance, iot, nvr]
 priority: 85
-condition: all
+condition: any
 matchers:
   - field: http.body
     op: contains
@@ -13,3 +13,15 @@ matchers:
     op: contains
     value: PlatformConfig-GAVI
     weight: 4
+  - field: http.body
+    op: contains
+    value: Preview-component-FishEye
+    weight: 7
+  - field: http.body
+    op: contains
+    value: FaceFind-FaceRecognition
+    weight: 7
+  - field: http.body
+    op: contains
+    value: RadarLink-RadarLocation
+    weight: 6

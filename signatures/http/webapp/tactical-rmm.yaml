@@ -1,0 +1,11 @@
+id: tactical-rmm
+name: Tactical RMM
+category: webapp
+tags: [self-hosted, monitoring, remote-access]
+priority: 75
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Tactical RMM
+    weight: 8

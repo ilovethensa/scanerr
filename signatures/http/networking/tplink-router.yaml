@@ -1,10 +1,31 @@
 id: tplink-router
 name: TP-Link Router
 category: networking
-tags: [router, tplink]
+tags: [router, networking, iot]
 priority: 85
+condition: any
 matchers:
   - field: http.body
     op: contains
     value: AX80v1
     weight: 5
+  - field: http.body
+    op: contains
+    value: tpEncrypt.new.js
+    weight: 8
+  - field: http.body
+    op: contains
+    value: $.su.language
+    weight: 6
+  - field: http.body
+    op: contains
+    value: tpEncrypt
+    weight: 5
+  - field: http.body
+    op: contains
+    value: tplinklogin.net
+    weight: 9
+  - field: http.body
+    op: contains
+    value: tplinkwifi.net
+    weight: 8

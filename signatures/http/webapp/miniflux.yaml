@@ -1,0 +1,19 @@
+id: miniflux
+name: Miniflux
+category: webapp
+tags: [self-hosted, rss]
+priority: 75
+condition: any
+matchers:
+  - field: http.title
+    op: startswith
+    value: Sign In - Miniflux
+    weight: 8
+  - field: http.body
+    op: contains
+    value: apple-mobile-web-app-title
+    weight: 3
+  - field: http.body
+    op: contains
+    value: miniflux
+    weight: 5

@@ -1,0 +1,11 @@
+id: reticulum
+name: Reticulum
+category: iot
+tags: [mesh, networking, iot]
+priority: 75
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Reticulum Web UI
+    weight: 8

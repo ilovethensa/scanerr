@@ -1,0 +1,15 @@
+id: mailcow
+name: Mailcow
+category: mail
+tags: [email, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: mailcow_theme
+    weight: 8
+  - field: http.body
+    op: contains
+    value: mail.technodes.pro - mail UI
+    weight: 6

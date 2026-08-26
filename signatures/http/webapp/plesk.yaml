@@ -1,0 +1,19 @@
+id: plesk
+name: Plesk
+category: webapp
+tags: [hosting, control-panel]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: startswith
+    value: Plesk Obsidian
+    weight: 8
+  - field: http.body
+    op: contains
+    value: sid-plesk
+    weight: 7
+  - field: http.body
+    op: contains
+    value: plesk-build
+    weight: 8

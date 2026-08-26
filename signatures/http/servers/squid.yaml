@@ -1,0 +1,15 @@
+id: squid
+name: Squid Proxy
+category: server
+tags: [proxy, networking]
+priority: 70
+condition: any
+matchers:
+  - field: http.header.server
+    op: equals
+    value: squid
+    weight: 8
+  - field: http.body
+    op: contains
+    value: The Squid Software Foundation
+    weight: 7

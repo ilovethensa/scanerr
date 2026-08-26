@@ -1,0 +1,11 @@
+id: freshrss
+name: FreshRSS
+category: webapp
+tags: [self-hosted, rss]
+priority: 75
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: FreshRSS
+    weight: 8

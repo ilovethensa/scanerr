@@ -1,0 +1,15 @@
+id: envoy
+name: Envoy Proxy
+category: server
+tags: [proxy, networking, api-gateway]
+priority: 70
+condition: any
+matchers:
+  - field: http.body
+    op: equals
+    value: Not REST API, use gRPC client.
+    weight: 10
+  - field: http.header.server
+    op: equals
+    value: envoy
+    weight: 8

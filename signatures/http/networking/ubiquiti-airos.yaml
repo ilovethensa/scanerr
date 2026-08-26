@@ -1,0 +1,19 @@
+id: ubiquiti-airos
+name: Ubiquiti airOS
+category: networking
+tags: [router, networking, ubiquiti, iot]
+priority: 85
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Ubiquiti
+    weight: 5
+  - field: http.body
+    op: contains
+    value: main.d038ba94.js
+    weight: 6
+  - field: http.body
+    op: contains
+    value: vendors.chunk
+    weight: 4

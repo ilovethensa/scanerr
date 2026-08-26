@@ -1,0 +1,19 @@
+id: homepage
+name: Homepage
+category: webapp
+tags: [self-hosted, dashboard]
+priority: 70
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Homelab
+    weight: 5
+  - field: http.body
+    op: contains
+    value: api/config/custom.css
+    weight: 7
+  - field: http.body
+    op: contains
+    value: _next/static/css/e4faaa8089dcb222.css
+    weight: 8

@@ -1,10 +1,23 @@
 id: huawei-network-energy
 name: Huawei Network Energy
 category: power
-tags: [iot, power, solar]
-priority: 30
+tags: [iot, power, solar, inverter]
+priority: 80
+condition: any
 matchers:
   - field: http.body
     op: icontains
     value: relogin.asp
+    weight: 5
+  - field: http.body
+    op: icontains
+    value: Huawei Network Energy
+    weight: 8
+  - field: http.body
+    op: contains
+    value: jquery.pwddisplay.js
+    weight: 6
+  - field: http.body
+    op: contains
+    value: login_common.js
     weight: 5

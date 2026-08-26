@@ -1,0 +1,11 @@
+id: crafty
+name: Crafty Controller
+category: webapp
+tags: [self-hosted, gaming, minecraft]
+priority: 75
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Crafty Controller
+    weight: 8

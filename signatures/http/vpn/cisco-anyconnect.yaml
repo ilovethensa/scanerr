@@ -1,0 +1,15 @@
+id: cisco-anyconnect
+name: Cisco AnyConnect VPN
+category: vpn
+tags: [vpn, networking, security]
+priority: 90
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: config-auth client="vpn" type="auth-request"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Please enter your username.
+    weight: 8
