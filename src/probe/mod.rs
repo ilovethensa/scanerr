@@ -15,4 +15,5 @@ pub mod rtsp;
 pub mod sccp;
 pub mod smtp;
 pub mod ssh;
+pub mod telnet;
 pub mod tls;

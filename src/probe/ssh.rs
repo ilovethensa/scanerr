@@ -11,6 +11,7 @@ pub struct SshProbe;
 
 impl ProtocolProbe for SshProbe {
     fn protocol(&self) -> Protocol { Protocol::Ssh }
+    fn requires_probe_without_banner(&self) -> bool { true }
     fn detects_banner(&self, bytes: &[u8]) -> bool {
         String::from_utf8_lossy(bytes).starts_with("SSH-")
     }
@@ -23,7 +24,7 @@ impl ProtocolProbe for SshProbe {
 /// the host key and fingerprint. Returns enriched ServiceData.
 /// `banner` is the pre-read banner bytes from the identifier.
 pub async fn probe_ssh(ip: &str, port: u16, _user_agent: &str, banner: &[u8]) -> Result<ServiceData> {
-    // Parse the banner we already have
+    // Parse the banner we already have (may be empty if server waits for client)
     let server_version = String::from_utf8_lossy(banner).trim().to_string();
     let (product, version) = parse_ssh_version(&server_version);
 
@@ -31,14 +32,31 @@ pub async fn probe_ssh(ip: &str, port: u16, _user_agent: &str, banner: &[u8]) ->
     let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).await?;
     stream.set_nodelay(true)?;
 
-    // Read server version again (SSH requires version exchange on each connection)
+    // Try to read server version — some servers send it immediately, others wait
     let mut buf = [0u8; 4096];
-    let n = tokio::time::timeout(std::time::Duration::from_secs(5), stream.read(&mut buf)).await??;
-    let _server_version2 = String::from_utf8_lossy(&buf[..n]).trim().to_string();
+    let n = tokio::time::timeout(std::time::Duration::from_secs(3), stream.read(&mut buf)).await.unwrap_or(Ok(0))?;
+    let mut server_version2 = String::from_utf8_lossy(&buf[..n]).trim().to_string();
 
     // Send our version
     let client_version = format!("SSH-2.0-scanerr_0.1\r\n");
     stream.write_all(client_version.as_bytes()).await?;
+
+    // If server didn't send a version yet, read again after we sent ours
+    if server_version2.is_empty() {
+        let n2 = tokio::time::timeout(std::time::Duration::from_secs(3), stream.read(&mut buf)).await.unwrap_or(Ok(0))?;
+        server_version2 = String::from_utf8_lossy(&buf[..n2]).trim().to_string();
+    }
+
+    // Parse product/version from whichever version string we got
+    let (product2, version2) = parse_ssh_version(&server_version2);
+    let final_product = product2.or(product);
+    let final_version = version2.or(version);
+    let final_banner = if !server_version2.is_empty() { server_version2 } else { server_version };
+
+    // If we got no SSH banner at all, this isn't SSH
+    if final_banner.is_empty() || !final_banner.starts_with("SSH-") {
+        anyhow::bail!("no SSH banner received");
+    }
 
     // Send KEXINIT with reasonable algorithm lists
     let kexinit = build_kexinit();
@@ -65,17 +83,17 @@ pub async fn probe_ssh(ip: &str, port: u16, _user_agent: &str, banner: &[u8]) ->
 
     let mut data = ServiceData::default();
     data.kind = "ssh".into();
-    data.product = product.clone();
-    data.version = version.clone();
-    data.banner = Some(server_version.clone());
+    data.product = final_product.clone();
+    data.version = final_version.clone();
+    data.banner = Some(final_banner.clone());
 
     data.ssh = Some(SshData {
-        raw: server_version,
+        raw: final_banner,
         key_type: host_key_info.as_ref().and_then(|k| k.0.clone()),
         key: host_key_info.as_ref().and_then(|k| k.1.clone()),
         fingerprint: host_key_info.as_ref().and_then(|k| k.2.clone()),
-        product,
-        version,
+        product: final_product,
+        version: final_version,
     });
 
     Ok(data)
