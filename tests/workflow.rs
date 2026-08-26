@@ -2,7 +2,7 @@
 //!   queue_host_scans → queue_service_probes → probe (mock HTTP) → enrich (mock favicon) → verify DB + API
 
 use scanerr::enrich::favicon;
-use scanerr::fingerprint::Corpus;
+use scanerr::fingerprint::Engine;
 use scanerr::probe::dispatch;
 use scanerr::queue;
 
@@ -99,6 +99,8 @@ async fn test_full_workflow(pool: sqlx::PgPool) {
 
     let (probe_id, probe_ip, probe_port, probe_transport) = &items[0];
 
+    let engine = Engine::from_signatures(vec![]);
+
     let result = dispatch::probe(
         &pool,
         probe_ip,
@@ -106,6 +108,7 @@ async fn test_full_workflow(pool: sqlx::PgPool) {
         probe_transport,
         "scanerr-test/1.0",
         None, // no GeoIP
+        &engine,
     )
     .await
     .expect("probe should succeed");
@@ -129,8 +132,8 @@ async fn test_full_workflow(pool: sqlx::PgPool) {
     // STEP 4: Fingerprint — run identify() on the service data
     // ================================================================
     let mut data = result.data.clone();
-    let corpus = Corpus::new(None);
-    corpus.identify(&mut data);
+    let engine = Engine::from_signatures(vec![]);
+    engine.identify(&mut data);
 
     // Should match both nginx (server header) and proxmox (title) signatures
     assert!(data.tags.contains(&"web".to_string()));

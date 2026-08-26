@@ -19,19 +19,20 @@ async fn test_probe_http_plain() {
     });
 
     let data = http::probe_http(
+        "http",
         &addr.ip().to_string(),
         addr.port(),
-        false,
         "test-agent/1.0",
     )
     .await
     .unwrap();
 
-    assert_eq!(data.status, 200);
-    assert_eq!(data.title.as_deref(), Some("Test Page"));
-    assert!(data.body.as_deref().unwrap().contains("Hello World"));
+    let http = data.http.as_ref().unwrap();
+    assert_eq!(http.status, 200);
+    assert_eq!(http.title.as_deref(), Some("Test Page"));
+    assert!(http.body.as_deref().unwrap().contains("Hello World"));
     assert_eq!(
-        data.headers.get("server").unwrap().first().unwrap(),
+        http.headers.get("server").unwrap().as_str().unwrap(),
         "nginx/1.18.0"
     );
 }
@@ -59,8 +60,7 @@ async fn test_probe_raw_banner_ftp() {
     .unwrap();
 
     assert_eq!(data.kind, "ftp");
-    assert!(data.tags.contains(&"ftp".to_string()));
-    assert!(data.raw.as_deref().unwrap().contains("220"));
+    assert!(data.banner.as_deref().unwrap().contains("220"));
 }
 
 #[tokio::test]
@@ -83,7 +83,7 @@ async fn test_probe_raw_banner_unknown() {
     .unwrap();
 
     assert_eq!(data.kind, "unknown");
-    assert!(data.raw.is_some());
+    assert!(data.banner.is_some());
 }
 
 #[tokio::test]

@@ -3,66 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Search Results - scanerr</title>
+    <title>Search - scanerr</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { background: #161b22; padding: 20px 0; border-bottom: 1px solid #30363d; }
-        h1 { color: #58a6ff; font-size: 24px; }
-        .search-box { margin: 20px 0; }
-        .search-box input { width: 100%; padding: 12px; font-size: 16px; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; }
-        .search-box input:focus { outline: none; border-color: #58a6ff; }
-        .results { margin-top: 20px; }
-        .result-item { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; margin-bottom: 12px; text-decoration: none; color: inherit; display: block; }
-        .result-item:hover { border-color: #58a6ff; }
-        .result-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .result-ip { color: #58a6ff; font-weight: bold; }
-        .result-port { color: #8b949e; }
-        .result-tags { display: flex; gap: 8px; margin-top: 8px; }
-        .tag { background: #1f6feb33; color: #58a6ff; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
-        .tag.iot { background: #f0883e33; color: #f0883e; }
-        .empty { text-align: center; padding: 40px; color: #8b949e; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e14; color: #c5cdd9; line-height: 1.5; }
+        a { color: #4da3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .topbar { background: #11161d; border-bottom: 1px solid #1e2733; padding: 12px 0; }
+        .topbar-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 16px; }
+        .logo { font-size: 18px; font-weight: 700; color: #4da3ff; letter-spacing: -0.5px; }
+        .topbar form { flex: 1; max-width: 500px; }
+        .topbar input { width: 100%; padding: 7px 12px; font-size: 14px; background: #0a0e14; border: 1px solid #1e2733; border-radius: 4px; color: #c5cdd9; }
+        .topbar input:focus { outline: none; border-color: #4da3ff; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+        .results-info { color: #6b7a8d; font-size: 14px; margin-bottom: 16px; }
+
+        .svc-table { width: 100%; border-collapse: collapse; }
+        .svc-table th { text-align: left; padding: 10px 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7a8d; border-bottom: 1px solid #1e2733; font-weight: 600; }
+        .svc-table td { padding: 10px 12px; border-bottom: 1px solid #141a22; font-size: 14px; }
+        .svc-table tr:hover td { background: #11161d; }
+        .svc-table .ip { color: #4da3ff; font-family: monospace; }
+        .svc-table .port { color: #c5cdd9; font-weight: 600; font-family: monospace; }
+        .svc-table .proto { color: #6b7a8d; font-family: monospace; font-size: 13px; }
+        .svc-table .product { color: #c5cdd9; }
+        .svc-table .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .svc-table .tag { background: #1a2332; color: #4da3ff; padding: 1px 8px; border-radius: 3px; font-size: 12px; white-space: nowrap; }
+
+        .empty { text-align: center; padding: 48px 0; color: #6b7a8d; }
     </style>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1>scanerr</h1>
-        </div>
-    </header>
-    <div class="container">
-        <div class="search-box">
+    <div class="topbar">
+        <div class="topbar-inner">
+            <a href="/" class="logo">scanerr</a>
             <form action="/search" method="get">
                 <input type="text" name="q" placeholder="Search services..." value="{{ query }}">
             </form>
         </div>
-        <p style="color: #8b949e; margin-bottom: 16px;">{{ results }} results found</p>
-        <div class="results">
-            {% for service in services %}
-            <a href="/service/{{ service.0 }}" class="result-item">
-                <div class="result-header">
-                    <span class="result-ip">{{ service.7 }}</span>
-                    <span class="result-port">:{{ service.1 }}/{{ service.2 }}</span>
-                </div>
-                {% if service.4.http %}
-                <div style="color: #8b949e; margin-top: 4px;">
-                    {% if service.4.http.title %}{{ service.4.http.title }}{% endif %}
-                </div>
+    </div>
+    <div class="container">
+        <div class="results-info">{% if results == 1 %}1 result found{% else %}{{ results }} results found{% endif %}</div>
+        {% if services %}
+        <table class="svc-table">
+            <thead>
+                <tr>
+                    <th>IP</th>
+                    <th>Port</th>
+                    <th>Protocol</th>
+                    <th>Product / Title</th>
+                    <th>Tags</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in services %}
+                {% set d = s.data %}
+                {% set http = d.http | default(value="") %}
+                {% set title = "" %}
+                {% if http != "" %}
+                    {% set title = http.title | default(value="") %}
                 {% endif %}
-                {% if service.4.tags %}
-                <div class="result-tags">
-                    {% for tag in service.4.tags %}
-                    <span class="tag{% if tag == 'iot' %} iot{% endif %}">{{ tag }}</span>
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </a>
-            {% endfor %}
-            {% if not services %}
-            <div class="empty">No services found matching your query</div>
-            {% endif %}
-        </div>
+                {% set product = d.product | default(value="") %}
+                {% set kind = d.kind | default(value="unknown") %}
+                {% set tags = d.tags | default(value=[]) %}
+                <tr>
+                    <td class="ip"><a href="/hosts/{{ s.ip }}">{{ s.ip }}</a></td>
+                    <td class="port">{{ s.port }}</td>
+                    <td class="proto">{{ s.transport }}</td>
+                    <td class="product">
+                        {% if title %}{{ title }}{% endif %}
+                        {% if product %}{{ product }}{% endif %}
+                        {% if not title and not product %}<span style="color:#6b7a8d">{{ kind }}</span>{% endif %}
+                    </td>
+                    <td>
+                        <div class="tags">
+                            {% for tag in tags %}<span class="tag">{{ tag }}</span>{% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty">No services found matching your query</div>
+        {% endif %}
     </div>
 </body>
 </html>

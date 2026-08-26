@@ -19,26 +19,27 @@ pub async fn read_raw_banner(
     .await;
 
     let bytes = result.unwrap_or_default();
-    let banner = String::from_utf8_lossy(&bytes).to_string();
+    Ok(read_raw_banner_from_bytes(&bytes))
+}
 
+pub fn read_raw_banner_from_bytes(bytes: &[u8]) -> ServiceData {
+    let banner = String::from_utf8_lossy(bytes).to_string();
     let mut data = ServiceData::default();
 
     if banner.starts_with("SSH-") {
         data.kind = "ssh".into();
-        data.raw = Some(banner);
-        data.tags.push("ssh".into());
+        data.banner = Some(banner);
     } else if banner.starts_with("220 ") || banner.contains("FTP") {
         data.kind = "ftp".into();
-        data.raw = Some(banner);
-        data.tags.push("ftp".into());
+        data.banner = Some(banner);
     } else {
         data.kind = "unknown".into();
         if !banner.is_empty() {
-            data.raw = Some(banner);
+            data.banner = Some(banner);
         }
     }
 
-    Ok(data)
+    data
 }
 
 #[cfg(test)]
@@ -65,6 +66,5 @@ mod tests {
         .unwrap();
 
         assert_eq!(data.kind, "ssh");
-        assert!(data.tags.contains(&"ssh".to_string()));
     }
 }

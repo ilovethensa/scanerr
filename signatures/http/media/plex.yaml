@@ -1,0 +1,10 @@
+id: plex
+name: Plex Media Server
+category: media
+tags: [media, streaming]
+priority: 85
+matchers:
+  - field: http.header.x-plex-protocol
+    op: exists
+    value: "1"
+    weight: 5

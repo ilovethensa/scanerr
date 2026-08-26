@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ host.ip }} - scanerr</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :focus-visible { outline: 2px solid #4da3ff; outline-offset: 2px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e14; color: #c5cdd9; line-height: 1.5; }
+        a { color: #4da3ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        button { font-family: inherit; }
+
+        .topbar { background: #11161d; border-bottom: 1px solid #1e2733; padding: 12px 0; }
+        .topbar-inner { max-width: 1100px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 16px; }
+        .logo { font-size: 18px; font-weight: 700; color: #4da3ff; letter-spacing: -0.5px; }
+        .topbar form { flex: 1; max-width: 500px; }
+        .topbar input { width: 100%; padding: 7px 12px; font-size: 14px; background: #0a0e14; border: 1px solid #1e2733; border-radius: 4px; color: #c5cdd9; font-family: inherit; }
+        .topbar input:focus { outline: none; border-color: #4da3ff; }
+        .topbar input::placeholder { color: #4a5566; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+        .host-header { margin-bottom: 28px; }
+        .host-ip { font-size: 28px; font-weight: 700; color: #fff; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .host-meta { display: flex; align-items: center; margin-top: 10px; color: #6b7a8d; font-size: 14px; flex-wrap: wrap; }
+        .host-meta .meta-item { padding-right: 14px; margin-right: 14px; border-right: 1px solid #1e2733; }
+        .host-meta .meta-item:last-child { border-right: none; margin-right: 0; padding-right: 0; }
+        .host-meta .meta-item.strong { color: #c5cdd9; font-weight: 600; }
+
+        .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+        .section-title { font-size: 14px; font-weight: 600; color: #6b7a8d; text-transform: uppercase; letter-spacing: 0.5px; }
+        .section-controls { display: flex; gap: 14px; }
+        .link-btn { background: none; border: none; padding: 0; color: #6b7a8d; font-size: 12px; cursor: pointer; }
+        .link-btn:hover { color: #4da3ff; text-decoration: underline; }
+
+        .svc-card { background: #11161d; border: 1px solid #1e2733; border-left: 3px solid transparent; border-radius: 6px; margin-bottom: 8px; }
+        .svc-card.risky { border-left-color: #4a2a2a; }
+        .svc-header { display: flex; align-items: center; gap: 16px; width: 100%; padding: 12px 16px; background: none; border: none; text-align: left; cursor: pointer; color: inherit; }
+        .svc-header:hover { background: #161d27; }
+        .svc-port { color: #4da3ff; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px; min-width: 56px; }
+        .svc-card.risky .svc-port { color: #d46b6b; }
+        .svc-proto { color: #6b7a8d; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; min-width: 38px; text-transform: uppercase; }
+        .svc-label { color: #c5cdd9; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .svc-label.muted { color: #6b7a8d; }
+        .svc-server { color: #6b7a8d; font-size: 13px; white-space: nowrap; }
+        .svc-tags { display: flex; gap: 4px; flex-wrap: wrap; }
+        .svc-chevron { color: #6b7a8d; font-size: 11px; transition: transform 0.15s; flex-shrink: 0; }
+        .svc-card.open .svc-chevron { transform: rotate(90deg); }
+
+        .tag { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 3px; background: #1a2332; color: #6b9fd4; border: 1px solid #243044; white-space: nowrap; }
+        .tag.iot { background: #1a2a1a; color: #6bc76b; border-color: #2a4a2a; }
+        .tag.security { background: #2a1a1a; color: #d46b6b; border-color: #4a2a2a; }
+        .tag.web { background: #1a1a2a; color: #6b6bd4; border-color: #2a2a4a; }
+        .tag.server { background: #1a2228; color: #6bb8d4; border-color: #2a3a44; }
+        .tag.power { background: #2a2a1a; color: #d4c76b; border-color: #4a4a2a; }
+        .tag.cdn { background: #1a2a2a; color: #6bd4c7; border-color: #2a4a4a; }
+        .tag.aws { background: #2a1a1a; color: #d4a06b; border-color: #4a2a1a; }
+
+        .svc-body { display: none; border-top: 1px solid #1e2733; background: #0d1219; border-radius: 0 0 6px 6px; }
+        .svc-card.open .svc-body { display: block; }
+        .svc-body-toolbar { display: flex; justify-content: flex-end; padding: 8px 16px 0; }
+        .copy-btn { background: #161d27; border: 1px solid #1e2733; color: #6b7a8d; font-size: 11px; padding: 4px 10px; border-radius: 4px; cursor: pointer; }
+        .copy-btn:hover { border-color: #4da3ff; color: #c5cdd9; }
+        .svc-body pre { font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; font-size: 13px; color: #c5cdd9; white-space: pre-wrap; word-break: break-word; line-height: 1.6; padding: 12px 16px 16px; }
+        .json-key { color: #7ee787; }
+        .json-string { color: #a5d6ff; }
+        .json-number { color: #f0883e; }
+        .json-bool { color: #ff7b72; }
+        .json-null { color: #6b7a8d; }
+
+        .empty { text-align: center; padding: 48px 0; color: #6b7a8d; }
+
+        @media (max-width: 640px) {
+            .container { padding: 16px; }
+            .svc-header { flex-wrap: wrap; gap: 8px 12px; }
+            .svc-server { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-inner">
+            <a href="/" class="logo">scanerr</a>
+            <form action="/search" method="get">
+                <input type="text" name="q" placeholder="Search services..." value="">
+            </form>
+        </div>
+    </div>
+    <div class="container">
+        <div class="host-header">
+            <div class="host-ip">{{ host.ip }}</div>
+            <div class="host-meta">
+                {% if host.reverse_dns %}<span class="meta-item">{{ host.reverse_dns }}</span>{% endif %}
+                {% if host.country_code %}<span class="meta-item">{{ host.country_code }}</span>{% endif %}
+                {% if host.asn %}<span class="meta-item">AS{{ host.asn }}</span>{% endif %}
+                {% if host.org %}<span class="meta-item">{{ host.org }}</span>{% endif %}
+                <span class="meta-item strong">{{ services | length }} service{% if services | length != 1 %}s{% endif %}</span>
+            </div>
+        </div>
+
+        <div class="section-head">
+            <div class="section-title">Services</div>
+            {% if services %}
+            <div class="section-controls">
+                <button type="button" class="link-btn" id="expandAllBtn">Expand all</button>
+                <button type="button" class="link-btn" id="collapseAllBtn">Collapse all</button>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if services %}
+        {% for svc in services %}
+        {% set d = svc.data %}
+        {% set http = d.http | default(value="") %}
+        {% set title = "" %}
+        {% if http != "" %}{% set title = http.title | default(value="") %}{% endif %}
+        {% set product = d.product | default(value="") %}
+        {% set server = "" %}
+        {% if http != "" %}{% set server = http.server | default(value="") %}{% endif %}
+        {% set kind = d.kind | default(value="unknown") %}
+        {% set tags = d.tags | default(value=[]) %}
+        {% set is_risky = kind == "telnet" or kind == "rdp" or kind == "ftp" or kind == "vnc" or kind == "smb" %}
+        <div class="svc-card{% if is_risky %} risky{% endif %}" id="svc-{{ svc.port }}">
+            <button type="button" class="svc-header" aria-expanded="false">
+                <span class="svc-chevron">&#9654;</span>
+                <span class="svc-port">{{ svc.port }}</span>
+                <span class="svc-proto">{{ svc.transport }}</span>
+                <span class="svc-label{% if not title and not product %} muted{% endif %}">
+                    {% if title %}{{ title }}{% elif product %}{{ product }}{% else %}{{ kind }}{% endif %}
+                </span>
+                {% if server %}<span class="svc-server">{{ server }}</span>{% endif %}
+                <div class="svc-tags">
+                    {% for tag in tags %}<span class="tag {{ tag }}">{{ tag }}</span>{% endfor %}
+                </div>
+            </button>
+            <div class="svc-body">
+                <div class="svc-body-toolbar">
+                    <button type="button" class="copy-btn">Copy JSON</button>
+                </div>
+                <pre class="json-raw">{{ svc.data | json_encode(pretty=true) }}</pre>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="empty">No services discovered yet</div>
+        {% endif %}
+    </div>
+    <script>
+    function unescapeStrings(obj) {
+        if (typeof obj === 'string') {
+            return obj.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\r/g, '');
+        }
+        if (Array.isArray(obj)) return obj.map(unescapeStrings);
+        if (obj && typeof obj === 'object') {
+            const out = {};
+            for (const [k, v] of Object.entries(obj)) out[k] = unescapeStrings(v);
+            return out;
+        }
+        return obj;
+    }
+
+    function syntaxHighlight(json) {
+        json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return json.replace(
+            /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+            match => {
+                let cls = 'json-number';
+                if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-string';
+                else if (/true|false/.test(match)) cls = 'json-bool';
+                else if (/null/.test(match)) cls = 'json-null';
+                return `<span class="${cls}">${match}</span>`;
+            }
+        );
+    }
+
+    function renderJson(card) {
+        const pre = card.querySelector('.json-raw');
+        if (!pre || card.dataset.rendered) return;
+        try {
+            const obj = JSON.parse(pre.textContent);
+            const clean = unescapeStrings(obj);
+            const pretty = JSON.stringify(clean, null, 2);
+            pre.innerHTML = syntaxHighlight(pretty);
+            card.dataset.json = pretty;
+        } catch (e) {
+            card.dataset.json = pre.textContent;
+        }
+        card.dataset.rendered = '1';
+    }
+
+    function setOpen(card, open) {
+        if (open) renderJson(card);
+        card.classList.toggle('open', open);
+        card.querySelector('.svc-header').setAttribute('aria-expanded', String(open));
+    }
+
+    document.querySelectorAll('.svc-card').forEach(card => {
+        card.querySelector('.svc-header').addEventListener('click', () => {
+            setOpen(card, !card.classList.contains('open'));
+        });
+        const copyBtn = card.querySelector('.copy-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', e => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(card.dataset.json || '').then(() => {
+                    const original = copyBtn.textContent;
+                    copyBtn.textContent = 'Copied';
+                    setTimeout(() => { copyBtn.textContent = original; }, 1200);
+                });
+            });
+        }
+    });
+
+    const expandAllBtn = document.getElementById('expandAllBtn');
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+    if (expandAllBtn) expandAllBtn.addEventListener('click', () => {
+        document.querySelectorAll('.svc-card').forEach(card => setOpen(card, true));
+    });
+    if (collapseAllBtn) collapseAllBtn.addEventListener('click', () => {
+        document.querySelectorAll('.svc-card').forEach(card => setOpen(card, false));
+    });
+    </script>
+</body>
+</html>

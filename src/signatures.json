@@ -88,5 +88,77 @@
     "matchers": [
       { "Title": "Grafana" }
     ]
+  },
+  {
+    "name": "huawei_network_energy",
+    "product": "Huawei Network Energy",
+    "version": null,
+    "tags": ["iot", "power", "solar"],
+    "matchers": [
+      { "SslSubject": "Network Energy" }
+    ]
+  },
+  {
+    "name": "huawei_network_energy_body",
+    "product": "Huawei Network Energy",
+    "version": null,
+    "tags": ["iot", "power", "solar"],
+    "matchers": [
+      { "Body": "relogin.asp" }
+    ]
+  },
+  {
+    "name": "huawei_smartlogger",
+    "product": "Huawei SmartLogger 3000",
+    "version": null,
+    "tags": ["iot", "power", "solar", "logger"],
+    "matchers": [
+      { "Body": "SmartLogger3000" }
+    ]
+  },
+  {
+    "name": "huawei_sun2000",
+    "product": "Huawei SUN2000",
+    "version": null,
+    "tags": ["iot", "power", "solar", "inverter"],
+    "matchers": [
+      { "Body": "/0/up/" }
+    ]
+  },
+  {
+    "name": "wazuh",
+    "product": "Wazuh",
+    "version": null,
+    "tags": ["security", "siem"],
+    "matchers": [
+      { "Title": "Wazuh" }
+    ]
+  },
+  {
+    "name": "erpnext",
+    "product": "ERPNext",
+    "version": null,
+    "tags": ["web", "erp", "business"],
+    "matchers": [
+      { "Body": "erpnext" }
+    ]
+  },
+  {
+    "name": "litespeed",
+    "product": "LiteSpeed",
+    "version": null,
+    "tags": ["web", "server"],
+    "matchers": [
+      { "HeaderServer": "LiteSpeed" }
+    ]
+  },
+  {
+    "name": "ipacct",
+    "product": "IPACCT",
+    "version": null,
+    "tags": ["web", "isp", "billing"],
+    "matchers": [
+      { "Title": "IPACCT" }
+    ]
   }
 ]

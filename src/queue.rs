@@ -107,6 +107,15 @@ impl LeasedQueue {
         Ok(())
     }
 
+    pub async fn complete(&self, pool: &PgPool, id: i64) -> Result<()> {
+        let q = format!("DELETE FROM {} WHERE id = $1", self.table);
+        sqlx::query(&q)
+            .bind(id)
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
+
     pub async fn sweep(&self, pool: &PgPool, max_attempts: i32, now: i64) -> Result<u64> {
         let requeue = format!(
             "UPDATE {t} SET claimed_until = NULL WHERE (claimed_until IS NOT NULL AND claimed_until < $1) AND attempts < $2",

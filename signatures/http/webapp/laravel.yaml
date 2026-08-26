@@ -1,0 +1,15 @@
+id: laravel
+name: Laravel
+category: webapp
+tags: [php, framework]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.set-cookie
+    op: icontains
+    value: laravel_session
+    weight: 5
+  - field: http.header.set-cookie
+    op: icontains
+    value: XSRF-TOKEN
+    weight: 3

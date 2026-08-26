@@ -1,0 +1,15 @@
+id: huawei-smartlogger-3000
+name: Huawei SmartLogger 3000
+category: power
+tags: [iot, power, solar, logger]
+priority: 100
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: SmartLogger3000
+    weight: 5
+  - field: ssl.subject_cn
+    op: contains
+    value: Network Energy
+    weight: 3

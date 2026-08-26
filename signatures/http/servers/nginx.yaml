@@ -1,0 +1,10 @@
+id: nginx
+name: nginx
+category: server
+tags: []
+priority: 50
+matchers:
+  - field: http.header.server
+    op: icontains
+    value: nginx
+    weight: 5

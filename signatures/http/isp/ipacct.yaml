@@ -1,0 +1,10 @@
+id: ipacct
+name: IPACCT
+category: isp
+tags: [web, isp, billing]
+priority: 80
+matchers:
+  - field: http.title
+    op: icontains
+    value: IPACCT
+    weight: 5

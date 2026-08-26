@@ -1,0 +1,10 @@
+id: hacs
+name: HACS
+category: iot
+tags: [iot, smart-home, home-assistant]
+priority: 75
+matchers:
+  - field: http.body
+    op: contains
+    value: /hacsfiles/
+    weight: 5

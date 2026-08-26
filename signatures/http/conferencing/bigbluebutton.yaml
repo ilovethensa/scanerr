@@ -1,0 +1,15 @@
+id: bigbluebutton
+name: BigBlueButton
+category: conferencing
+tags: [bigbluebutton, conferencing, video, greenlight]
+priority: 85
+condition: all
+matchers:
+  - field: http.body
+    op: icontains
+    value: "BigBlueButton open source conferencing system"
+    weight: 6
+  - field: http.header.set-cookie
+    op: icontains
+    value: "_greenlight_session"
+    weight: 4

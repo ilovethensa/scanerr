@@ -1,0 +1,19 @@
+id: drupal
+name: Drupal
+category: webapp
+tags: [cms, php]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: Drupal.settings
+    weight: 5
+  - field: http.body
+    op: contains
+    value: sites/default/files
+    weight: 4
+  - field: http.body
+    op: contains
+    value: drupal.js
+    weight: 4

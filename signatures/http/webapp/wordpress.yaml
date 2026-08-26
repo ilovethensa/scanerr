@@ -1,0 +1,15 @@
+id: wordpress
+name: WordPress
+category: webapp
+tags: [cms, php]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: wp-content
+    weight: 5
+  - field: http.body
+    op: contains
+    value: wp-includes
+    weight: 5

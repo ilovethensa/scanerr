@@ -1,0 +1,15 @@
+id: cloudfront
+name: Amazon CloudFront
+category: cdn
+tags: [web, cdn, aws, amazon]
+priority: 60
+condition: any
+matchers:
+  - field: http.header.server
+    op: icontains
+    value: CloudFront
+    weight: 5
+  - field: http.header.x-amz-cf-id
+    op: exists
+    value: ""
+    weight: 3

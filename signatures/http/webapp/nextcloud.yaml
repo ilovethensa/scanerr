@@ -1,0 +1,15 @@
+id: nextcloud
+name: Nextcloud
+category: webapp
+tags: [cloud, storage]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.set-cookie
+    op: icontains
+    value: oc_sessionPassphrase
+    weight: 5
+  - field: http.body
+    op: icontains
+    value: nextcloud
+    weight: 4

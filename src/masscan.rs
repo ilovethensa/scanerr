@@ -7,33 +7,41 @@ pub struct ScanResult {
     pub port: u16,
 }
 
-pub fn run_stage1(cidr: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
+const TARGETS_FILE: &str = "/tmp/masscan_targets.txt";
+const OUTPUT_FILE: &str = "/tmp/masscan_out.json";
+
+fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
     let port_str = ports
         .iter()
         .map(|p| p.to_string())
         .collect::<Vec<_>>()
         .join(",");
 
-    let tmpfile = "/tmp/masscan_out.json";
+    let targets_str = targets.join("\n");
+    std::fs::write(TARGETS_FILE, &targets_str)
+        .context("failed to write masscan targets file")?;
 
     let output = Command::new("masscan")
-        .arg(cidr)
+        .arg("-iL")
+        .arg(TARGETS_FILE)
         .arg("-p")
         .arg(&port_str)
         .arg("--rate")
         .arg(rate.to_string())
+        .arg("--retries")
+        .arg("2")
+        .arg("--open")
         .arg("--output-format")
         .arg("json")
-        .arg("--retries")
-        .arg("1")
-        .arg("--open")
         .arg("--output-filename")
-        .arg(tmpfile)
+        .arg(OUTPUT_FILE)
         .output()
         .context("failed to execute masscan")?;
 
-    let json = std::fs::read_to_string(tmpfile).unwrap_or_default();
-    let _ = std::fs::remove_file(tmpfile);
+    let _ = std::fs::remove_file(TARGETS_FILE);
+
+    let json = std::fs::read_to_string(OUTPUT_FILE).unwrap_or_default();
+    let _ = std::fs::remove_file(OUTPUT_FILE);
 
     if json.trim().is_empty() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -43,14 +51,20 @@ pub fn run_stage1(cidr: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult
     parse_masscan_json(&json)
 }
 
+pub fn run_stage1(cidr: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
+    masscan_scan(&[cidr.to_string()], ports, rate)
+}
+
+pub fn run_stage1_batch(ranges: &[String], ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
+    masscan_scan(ranges, ports, rate)
+}
+
 pub fn run_stage2(ip: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
     let port_str = ports
         .iter()
         .map(|p| p.to_string())
         .collect::<Vec<_>>()
         .join(",");
-
-    let tmpfile = "/tmp/masscan_out.json";
 
     let output = Command::new("masscan")
         .arg(ip)
@@ -61,15 +75,15 @@ pub fn run_stage2(ip: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>>
         .arg("--output-format")
         .arg("json")
         .arg("--retries")
-        .arg("1")
+        .arg("2")
         .arg("--open")
         .arg("--output-filename")
-        .arg(tmpfile)
+        .arg(OUTPUT_FILE)
         .output()
         .context("failed to execute masscan")?;
 
-    let json = std::fs::read_to_string(tmpfile).unwrap_or_default();
-    let _ = std::fs::remove_file(tmpfile);
+    let json = std::fs::read_to_string(OUTPUT_FILE).unwrap_or_default();
+    let _ = std::fs::remove_file(OUTPUT_FILE);
 
     if json.trim().is_empty() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -85,8 +99,6 @@ pub fn parse_masscan_json(json: &str) -> Result<Vec<ScanResult>> {
 
     let mut results = Vec::new();
 
-    // masscan outputs a flat JSON array:
-    // [{"ip": "...", "timestamp": "...", "ports": [{"port": 80, "proto": "tcp", ...}]}, ...]
     if let Some(items) = v.as_array() {
         for item in items {
             if let Some(ip) = item["ip"].as_str() {
@@ -155,7 +167,6 @@ mod tests {
 
     #[test]
     fn test_parse_banner_json() {
-        // Real masscan banner output
         let json = r#"[
   {"ip": "192.168.1.111", "timestamp": "1787656017", "ports": [{"port": 80, "proto": "tcp", "service": {"name": "http.server", "banner": "Caddy"}}]}
 ]"#;

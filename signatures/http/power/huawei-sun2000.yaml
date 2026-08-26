@@ -1,0 +1,10 @@
+id: huawei-sun2000
+name: Huawei SUN2000
+category: power
+tags: [iot, power, solar, inverter]
+priority: 80
+matchers:
+  - field: http.body
+    op: contains
+    value: /0/up/
+    weight: 5

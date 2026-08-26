@@ -1,0 +1,15 @@
+id: joomla
+name: Joomla!
+category: webapp
+tags: [cms, php]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: /media/jui/
+    weight: 5
+  - field: http.body
+    op: contains
+    value: Joomla!
+    weight: 4

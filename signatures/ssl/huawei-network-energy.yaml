@@ -1,0 +1,10 @@
+id: huawei-network-energy-ssl
+name: Huawei Network Energy
+category: power
+tags: [iot, power, solar]
+priority: 40
+matchers:
+  - field: ssl.subject_cn
+    op: contains
+    value: Network Energy
+    weight: 5

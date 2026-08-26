@@ -1,0 +1,15 @@
+id: home-assistant
+name: Home Assistant
+category: iot
+tags: [iot, smart-home]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: "<home-assistant"
+    weight: 5
+  - field: http.body
+    op: icontains
+    value: Home Assistant
+    weight: 3

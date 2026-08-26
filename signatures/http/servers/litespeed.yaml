@@ -1,0 +1,10 @@
+id: litespeed
+name: LiteSpeed
+category: server
+tags: []
+priority: 50
+matchers:
+  - field: http.header.server
+    op: icontains
+    value: LiteSpeed
+    weight: 5

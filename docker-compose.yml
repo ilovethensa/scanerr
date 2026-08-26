@@ -14,10 +14,27 @@ services:
       timeout: 5s
       retries: 5
 
-  scan:
+  sweep:
     image: scanerr-app
     build: .
-    command: ["scan"]
+    command: ["sweep"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      RUST_LOG: info
+    network_mode: host
+    cap_add:
+      - NET_RAW
+    volumes:
+      - ./scanerr.toml:/app/scanerr.toml:ro
+      - ./ranges.txt:/app/ranges.txt:ro
+
+  deepscan:
+    image: scanerr-app
+    build: .
+    command: ["deepscan"]
     depends_on:
       postgres:
         condition: service_healthy

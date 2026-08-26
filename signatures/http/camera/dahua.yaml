@@ -1,0 +1,23 @@
+id: dahua
+name: Dahua
+category: camera
+tags: [camera, surveillance, iot]
+priority: 90
+condition: any
+matchers:
+  - field: http.header.p3p
+    op: equals
+    value: "CP=CAO PSA OUR"
+    weight: 5
+  - field: http.header.server
+    op: equals
+    value: DNVRS-Webs
+    weight: 5
+  - field: http.body
+    op: contains
+    value: /IEpolyfill.min.js
+    weight: 3
+  - field: http.body
+    op: contains
+    value: /browserJudge.js
+    weight: 3

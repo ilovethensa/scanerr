@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use sqlx::PgPool;
 use tracing::info;
 
-use scanerr::{config, db, enrich, masscan, probe, queue, serve};
+use scanerr::{config, db, enrich, fingerprint, masscan, probe, queue, serve};
 
 #[derive(Parser)]
 #[command(name = "scanerr", about = "Shodan-like service scanner for homelabbers")]
@@ -14,10 +14,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Scan,
+    /// Run masscan discovery sweep — finds alive hosts, inserts into queue_host_scans
+    Sweep,
+    /// Run deep scan — claims alive hosts, masscan per-IP, inserts open ports into queue_service_probes
+    Deepscan,
     Probe,
     Enrich,
     Serve,
+    /// Run all stages in a single process (for local testing)
     All,
     /// Test: deep-scan a single IP
     TestScan {
@@ -55,9 +59,12 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     let config = config::load("scanerr.toml").unwrap_or_else(|_| config::Config::default());
-    let pool = db::connect(&config.database.url).await?;
-    db::run_migrations(&pool).await?;
 
+    // Build fingerprint engine once, shared across all probes
+    let sig_dir = std::path::Path::new(&config.signatures.dir);
+    let engine = fingerprint::Engine::from_dir(sig_dir);
+
+    // Test commands that don't need DB
     match &cli.command {
         Commands::TestScan { ip } => {
             let ports = config.scanner.deep_scan_ports.clone();
@@ -77,7 +84,7 @@ async fn main() -> Result<()> {
             let ip = parts[0];
             let port: u16 = parts[1].parse()?;
             let user_agent = config.probe.user_agent.clone();
-            let data = probe::dispatch::probe_standalone(ip, port, &user_agent).await?;
+            let data = probe::dispatch::probe_standalone(ip, port, &user_agent, &engine).await?;
             println!("{}", serde_json::to_string_pretty(&data)?);
             return Ok(());
         }
@@ -103,25 +110,32 @@ async fn main() -> Result<()> {
     db::run_migrations(&pool).await?;
 
     match cli.command {
-        Commands::Scan => run_scan(pool, config).await?,
-        Commands::Probe => run_probe(pool, config).await?,
+        Commands::Sweep => run_sweep(pool, config).await?,
+        Commands::Deepscan => run_deepscan(pool, config).await?,
+        Commands::Probe => run_probe(pool, config, engine).await?,
         Commands::Enrich => run_enrich(pool, config).await?,
-        Commands::Serve => run_serve(pool, config).await?,
+        Commands::Serve => run_serve(pool, config, engine).await?,
         Commands::All => {
             let config1 = config.clone();
             let config2 = config.clone();
             let config3 = config.clone();
+            let config4 = config.clone();
             let pool2 = pool.clone();
             let pool3 = pool.clone();
             let pool4 = pool.clone();
-            let h1 = tokio::spawn(run_scan(pool, config));
-            let h2 = tokio::spawn(run_probe(pool2, config1));
-            let h3 = tokio::spawn(run_enrich(pool3, config2));
-            let h4 = tokio::spawn(run_serve(pool4, config3));
+            let pool5 = pool.clone();
+            let engine2 = engine.clone();
+            let engine3 = engine.clone();
+            let h1 = tokio::spawn(run_sweep(pool, config));
+            let h2 = tokio::spawn(run_deepscan(pool2, config1));
+            let h3 = tokio::spawn(run_probe(pool3, config2, engine2));
+            let h4 = tokio::spawn(run_enrich(pool4, config3));
+            let h5 = tokio::spawn(run_serve(pool5, config4, engine3));
             h1.await??;
             h2.await??;
             h3.await??;
             h4.await??;
+            h5.await??;
         }
         _ => unreachable!(),
     }
@@ -129,11 +143,53 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn run_scan(pool: PgPool, config: config::Config) -> Result<()> {
-    info!("Starting scan stage...");
+async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
+    info!("Starting sweep (masscan discovery)...");
+
+    let scanner = config.scanner.clone();
+    let ranges = scanner.ranges.clone();
+    let ports = scanner.discovery_ports.clone();
+    let rate = scanner.discovery_rate;
+    let chunk_size = scanner.sweep_chunk_size;
+
+    for chunk in ranges.chunks(chunk_size) {
+        // Wait while backpressured — retry the same chunk, never skip it
+        loop {
+            match queue::backpressure_active(&pool, scanner.max_probe_queue_depth).await {
+                Ok(true) => {
+                    info!("Backpressure active — probe queue full, pausing sweep");
+                    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+                }
+                _ => break,
+            }
+        }
+
+        info!("Sweeping {} ranges", chunk.len());
+        let results = masscan::run_stage1_batch(chunk, &ports, rate)
+            .unwrap_or_default();
+
+        let mut inserted = 0u64;
+        for result in &results {
+            if let Err(e) = queue::insert_host_scan(&pool, &result.ip).await {
+                tracing::error!("Failed to insert host scan {}: {}", result.ip, e);
+            } else {
+                inserted += 1;
+            }
+        }
+        info!("Sweep chunk: found {} alive hosts, inserted {} into queue", results.len(), inserted);
+    }
+
+    info!("Sweep finished — all ranges scanned");
+    Ok(())
+}
+
+async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
+    info!("Starting deep scan...");
 
     let host_queue = queue::LeasedQueue::new("queue_host_scans");
-    let scanner = config.scanner.clone();
+    let ports = config.scanner.deep_scan_ports.clone();
+    let rate = config.scanner.deep_scan_rate;
+
     let now = || {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -141,77 +197,35 @@ async fn run_scan(pool: PgPool, config: config::Config) -> Result<()> {
             .as_secs() as i64
     };
 
-    // Stage 1: Broad sweep — lease subnets, run masscan, insert alive IPs
-    let sweep_pool = pool.clone();
-    let sweep_ranges = scanner.ranges.clone();
-    let sweep_ports = scanner.discovery_ports.clone();
-    let sweep_rate = scanner.discovery_rate;
-    let max_depth = scanner.max_probe_queue_depth;
-    let sweep_handle = tokio::spawn(async move {
-        for range in &sweep_ranges {
-            // Check backpressure before scanning
-            if queue::backpressure_active(&sweep_pool, max_depth).await.unwrap_or(false) {
-                info!("Backpressure active — probe queue full, pausing sweep");
-                tokio::time::sleep(std::time::Duration::from_secs(30)).await;
-                continue;
-            }
+    loop {
+        let t = now();
 
-            info!("Sweeping CIDR: {}", range);
-            let results = masscan::run_stage1(range, &sweep_ports, sweep_rate)
+        let items = host_queue.claim_host_scans(&pool, 10, t).await
+            .unwrap_or_default();
+
+        if items.is_empty() {
+            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            continue;
+        }
+
+        for (id, ip_str) in &items {
+            info!("Deep scanning {}", ip_str);
+            let results = masscan::run_stage2(ip_str, &ports, rate)
                 .unwrap_or_default();
 
-            let mut inserted = 0u64;
             for result in &results {
-                if let Err(e) = queue::insert_host_scan(&sweep_pool, &result.ip).await {
-                    tracing::error!("Failed to insert host scan {}: {}", result.ip, e);
-                } else {
-                    inserted += 1;
+                if let Err(e) = queue::insert_service_probe(&pool, &result.ip, result.port as i32, "tcp").await {
+                    tracing::error!("Failed to insert service probe: {}", e);
                 }
             }
-            info!("Sweep {}: found {} alive hosts, inserted {} into queue", range, results.len(), inserted);
+            info!("Deep scan {}: found {} open ports", ip_str, results.len());
+
+            let _ = host_queue.heartbeat(&pool, *id, now()).await;
         }
-    });
-
-    // Stage 2: Deep scan — claim IPs, run masscan per-IP, insert open ports
-    let deep_pool = pool.clone();
-    let deep_ports = scanner.deep_scan_ports.clone();
-    let deep_rate = scanner.deep_scan_rate;
-    let deep_handle = tokio::spawn(async move {
-        loop {
-            let t = now();
-
-            let items = host_queue.claim_host_scans(&deep_pool, 10, t).await
-                .unwrap_or_default();
-
-            if items.is_empty() {
-                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-                continue;
-            }
-
-            for (id, ip_str) in &items {
-                info!("Deep scanning {}", ip_str);
-                let results = masscan::run_stage2(ip_str, &deep_ports, deep_rate)
-                    .unwrap_or_default();
-
-                for result in &results {
-                    if let Err(e) = queue::insert_service_probe(&deep_pool, &result.ip, result.port as i32, "tcp").await {
-                        tracing::error!("Failed to insert service probe: {}", e);
-                    }
-                }
-                info!("Deep scan {}: found {} open ports", ip_str, results.len());
-
-                let _ = host_queue.heartbeat(&deep_pool, *id, now()).await;
-            }
-        }
-    });
-
-    sweep_handle.await?;
-    deep_handle.await?;
-
-    Ok(())
+    }
 }
 
-async fn run_probe(pool: PgPool, config: config::Config) -> Result<()> {
+async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::Engine) -> Result<()> {
     info!("Starting probe stage...");
     let probe_queue = queue::LeasedQueue::new("queue_service_probes");
     let user_agent = config.probe.user_agent.clone();
@@ -238,15 +252,19 @@ async fn run_probe(pool: PgPool, config: config::Config) -> Result<()> {
         for (id, ip_str, port, transport) in items {
             info!("Probing {}:{}", ip_str, port);
 
-            match probe::dispatch::probe(
-                &pool,
-                &ip_str,
-                port as u16,
-                &transport,
-                &user_agent,
-                geoip_db.as_deref(),
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(10),
+                probe::dispatch::probe(
+                    &pool,
+                    &ip_str,
+                    port as u16,
+                    &transport,
+                    &user_agent,
+                    geoip_db.as_deref(),
+                    &engine,
+                ),
             ).await {
-                Ok(result) => {
+                Ok(Ok(result)) => {
                     match probe::dispatch::upsert_service(&pool, &result).await {
                         Ok(service_id) => {
                             let _ = probe::dispatch::maybe_enqueue_enrichments(
@@ -256,11 +274,17 @@ async fn run_probe(pool: PgPool, config: config::Config) -> Result<()> {
                         }
                         Err(e) => tracing::error!("Failed to upsert service: {}", e),
                     }
+                    let _ = probe_queue.complete(&pool, id).await;
                 }
-                Err(e) => tracing::error!("Probe failed for {}:{}: {}", ip_str, port, e),
+                Ok(Err(e)) => {
+                    tracing::error!("Probe failed for {}:{}: {}", ip_str, port, e);
+                    let _ = probe_queue.complete(&pool, id).await;
+                }
+                Err(_) => {
+                    tracing::warn!("Probe timed out for {}:{}", ip_str, port);
+                    let _ = probe_queue.complete(&pool, id).await;
+                }
             }
-
-            let _ = probe_queue.heartbeat(&pool, id, now()).await;
         }
     }
 }
@@ -307,7 +331,7 @@ async fn run_enrich(pool: PgPool, config: config::Config) -> Result<()> {
     }
 }
 
-async fn run_serve(pool: PgPool, config: config::Config) -> Result<()> {
+async fn run_serve(pool: PgPool, config: config::Config, _engine: fingerprint::Engine) -> Result<()> {
     info!("Starting web server on {}", config.webui.bind);
 
     let tera = tera::Tera::new(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"))

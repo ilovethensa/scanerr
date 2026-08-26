@@ -1,0 +1,10 @@
+id: wazuh
+name: Wazuh
+category: monitoring
+tags: [security, siem]
+priority: 80
+matchers:
+  - field: http.title
+    op: icontains
+    value: Wazuh
+    weight: 5

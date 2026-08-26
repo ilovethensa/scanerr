@@ -1,0 +1,10 @@
+id: erpnext
+name: ERPNext
+category: erp
+tags: [web, erp, business]
+priority: 80
+matchers:
+  - field: http.body
+    op: icontains
+    value: erpnext
+    weight: 5

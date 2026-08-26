@@ -1,0 +1,10 @@
+id: sucuri
+name: Sucuri
+category: cdn
+tags: [cdn, waf]
+priority: 60
+matchers:
+  - field: http.header.x-sucuri-id
+    op: exists
+    value: "1"
+    weight: 5

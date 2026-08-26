@@ -1,0 +1,10 @@
+id: cloudflare
+name: Cloudflare
+category: cdn
+tags: [cdn, waf]
+priority: 60
+matchers:
+  - field: http.header.cf-ray
+    op: exists
+    value: "1"
+    weight: 5

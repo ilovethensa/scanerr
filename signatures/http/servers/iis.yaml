@@ -1,0 +1,10 @@
+id: iis
+name: Microsoft IIS
+category: server
+tags: []
+priority: 50
+matchers:
+  - field: http.header.server
+    op: icontains
+    value: Microsoft-IIS
+    weight: 5

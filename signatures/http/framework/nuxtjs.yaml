@@ -1,0 +1,15 @@
+id: nuxtjs
+name: Nuxt.js
+category: framework
+tags: [javascript, framework]
+priority: 70
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: __nuxt
+    weight: 5
+  - field: http.body
+    op: contains
+    value: _nuxt/
+    weight: 5

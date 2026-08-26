@@ -1,0 +1,15 @@
+id: google-analytics
+name: Google Analytics
+category: analytics
+tags: [analytics, tracking]
+priority: 40
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: google-analytics.com/analytics.js
+    weight: 4
+  - field: http.body
+    op: contains
+    value: googletagmanager.com
+    weight: 4

@@ -2,17 +2,57 @@ use anyhow::Result;
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio_rustls::{client::TlsStream, TlsConnector};
+use x509_parser::prelude::*;
+
 use crate::models::SslData;
+
+#[derive(Debug)]
+struct NoVerifier;
+
+impl rustls::client::danger::ServerCertVerifier for NoVerifier {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &rustls::pki_types::CertificateDer<'_>,
+        _intermediates: &[rustls::pki_types::CertificateDer<'_>],
+        _server_name: &rustls::pki_types::ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: rustls::pki_types::UnixTime,
+    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+        Ok(rustls::client::danger::ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        _message: &[u8],
+        _cert: &rustls::pki_types::CertificateDer<'_>,
+        _dcs: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        _message: &[u8],
+        _cert: &rustls::pki_types::CertificateDer<'_>,
+        _dcs: &rustls::DigitallySignedStruct,
+    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+        Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        rustls::crypto::ring::default_provider()
+            .signature_verification_algorithms
+            .supported_schemes()
+    }
+}
 
 pub async fn tls_connect(
     ip: &str,
     port: u16,
 ) -> Result<(TlsStream<TcpStream>, SslData)> {
-    let mut root_store = rustls::RootCertStore::empty();
-    root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-
     let config = rustls::ClientConfig::builder()
-        .with_root_certificates(root_store)
+        .dangerous()
+        .with_custom_certificate_verifier(Arc::new(NoVerifier))
         .with_no_client_auth();
 
     let connector = TlsConnector::from(Arc::new(config));
@@ -37,13 +77,29 @@ pub async fn tls_connect(
 fn extract_ssl_data(cert: Option<&rustls::pki_types::CertificateDer<'static>>) -> SslData {
     match cert {
         Some(cert) => {
-            let subject = extract_cn_from_cert(cert);
-            let issuer = extract_issuer_from_cert(cert);
-            let self_signed = subject == issuer;
+            let (_, parsed) = match X509Certificate::from_der(cert.as_ref()) {
+                Ok(v) => v,
+                Err(_) => {
+                    return SslData {
+                        subject_cn: None,
+                        issuer_cn: None,
+                        self_signed: false,
+                    }
+                }
+            };
+
+            // 2.5.4.3=CN, 2.5.4.10=O
+            let subject_cn = find_dn_attr(&parsed.subject(), "2.5.4.3")
+                .or_else(|| find_dn_attr(&parsed.subject(), "2.5.4.10"));
+
+            let issuer_cn = find_dn_attr(&parsed.issuer(), "2.5.4.3")
+                .or_else(|| find_dn_attr(&parsed.issuer(), "2.5.4.10"));
+
+            let self_signed = parsed.subject().to_string() == parsed.issuer().to_string();
 
             SslData {
-                subject_cn: subject,
-                issuer_cn: issuer,
+                subject_cn,
+                issuer_cn,
                 self_signed,
             }
         }
@@ -55,13 +111,19 @@ fn extract_ssl_data(cert: Option<&rustls::pki_types::CertificateDer<'static>>) -
     }
 }
 
-fn extract_cn_from_cert(_cert: &rustls::pki_types::CertificateDer<'static>) -> Option<String> {
-    // Parse the certificate to extract CN
-    // For now, return None as a placeholder
-    None
-}
-
-fn extract_issuer_from_cert(_cert: &rustls::pki_types::CertificateDer<'static>) -> Option<String> {
+fn find_dn_attr(name: &X509Name, target_oid: &str) -> Option<String> {
+    for rdn in name.iter() {
+        for attr in rdn.iter() {
+            let oid_str = attr.attr_type().to_string();
+            if oid_str == target_oid {
+                // attr_value() returns raw ASN.1; decode the UTF-8 bytes directly
+                let raw = attr.attr_value().data;
+                if let Ok(val) = std::str::from_utf8(raw) {
+                    return Some(val.to_string());
+                }
+            }
+        }
+    }
     None
 }
 

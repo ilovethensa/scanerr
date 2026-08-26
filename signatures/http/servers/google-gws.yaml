@@ -1,0 +1,14 @@
+id: google-gws
+name: Google Web Server
+category: server
+tags: [cdn]
+priority: 60
+matchers:
+  - field: http.header.server
+    op: equals
+    value: gws
+    weight: 5
+  - field: http.title
+    op: equals
+    value: Google
+    weight: 3

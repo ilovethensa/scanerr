@@ -1,0 +1,15 @@
+id: nextjs
+name: Next.js
+category: framework
+tags: [javascript, framework]
+priority: 70
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: __next
+    weight: 5
+  - field: http.body
+    op: contains
+    value: _next/static
+    weight: 5

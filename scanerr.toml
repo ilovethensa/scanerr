@@ -3,7 +3,7 @@ url = "postgres://scanerr:scanerr@localhost/scanerr"
 
 [scanner]
 # Stage 1: Broad discovery (find alive hosts)
-discovery_ports = [22, 80, 443]
+discovery_ports = [80, 443, 7547, 554, 22, 53, 8080, 179, 2000, 123, 23, 81, 1883, 5000, 8000, 8081, 8888, 37777]
 discovery_rate = 10000
 
 # Stage 2: Deep scan (find all ports on alive hosts)
@@ -13,12 +13,15 @@ deep_scan_rate = 500
 # Backpressure (Probe queue depth)
 max_probe_queue_depth = 50000
 
-ranges = ["192.168.1.0/24"]
+# Sweep: ranges per masscan invocation (streaming batch size)
+sweep_chunk_size = 20
+
+ranges_file = "ranges.txt"
 
 [probe]
 concurrency = 128
 timeout_secs = 5
-user_agent = "scanerr/0.1 (personal scanner)"
+user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"
 geoip_db_path = "./GeoLite2-City.mmdb"
 
 [enrich]
@@ -32,5 +35,5 @@ assets_dir = "./assets"
 bind = "127.0.0.1:8080"
 
 [signatures]
-overlay_file = ""
+dir = "signatures"
 disable = []
