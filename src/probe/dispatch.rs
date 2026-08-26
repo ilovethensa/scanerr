@@ -110,6 +110,11 @@ fn now() -> i64 {
 }
 
 pub async fn upsert_service(pool: &PgPool, result: &ProbeResult) -> Result<i64> {
+    // Don't store firewalled services
+    if result.data.kind == "firewalled" {
+        anyhow::bail!("firewalled — skipping storage");
+    }
+
     let t = now();
     let data_json = sanitize_json_nulls(serde_json::to_value(&result.data)?);
 
