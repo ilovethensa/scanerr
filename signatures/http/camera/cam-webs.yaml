@@ -1,0 +1,15 @@
+id: cam-webs
+name: Cam-Webs IP Camera
+category: camera
+tags: [camera, surveillance, iot]
+priority: 90
+condition: all
+matchers:
+  - field: http.header.server
+    op: equals
+    value: "Cam-Webs"
+    weight: 8
+  - field: http.header.www-authenticate
+    op: icontains
+    value: "Megapixel_IP_Camera"
+    weight: 7

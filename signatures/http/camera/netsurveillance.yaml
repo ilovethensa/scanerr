@@ -1,0 +1,19 @@
+id: netsurveillance
+name: NETSurveillance DVR
+category: camera
+tags: [camera, surveillance, iot, dvr]
+priority: 90
+condition: any
+matchers:
+  - field: http.title
+    op: icontains
+    value: "NETSurveillance"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: "NetSuveillanceWebCookie"
+    weight: 8
+  - field: http.body
+    op: contains
+    value: "NetSurveillance"
+    weight: 6

@@ -298,7 +298,7 @@ fn extract_js_redirect(body: &str) -> Option<String> {
         return Some(caps[1].to_string());
     }
     // Match meta refresh: <meta http-equiv="refresh" content="0; URL=/path">
-    let meta = regex::Regex::new(r#"content\s*=\s*["']\d+\s*;\s*URL=([^"']+)["']"#).ok()?;
+    let meta = regex::Regex::new(r#"(?i)content\s*=\s*["']\d+\s*;\s*url=([^"']+)["']"#).ok()?;
     if let Some(caps) = meta.captures(body) {
         return Some(caps[1].to_string());
     }

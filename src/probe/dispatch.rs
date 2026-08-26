@@ -157,6 +157,10 @@ pub async fn maybe_enqueue_enrichments(
     if data.rtsp.is_some() {
         crate::queue::insert_enrichment(pool, service_id, "rtsp_frame", now()).await?;
     }
+    // Enqueue camera frame capture for services tagged as cameras
+    if data.tags.iter().any(|t| t == "camera") {
+        crate::queue::insert_enrichment(pool, service_id, "camera_frame", now()).await?;
+    }
     Ok(())
 }
 

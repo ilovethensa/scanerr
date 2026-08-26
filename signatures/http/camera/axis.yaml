@@ -1,0 +1,19 @@
+id: axis
+name: Axis Communications Camera
+category: camera
+tags: [camera, surveillance, iot]
+priority: 90
+condition: any
+matchers:
+  - field: http.title
+    op: icontains
+    value: "AXIS"
+    weight: 10
+  - field: http.body
+    op: icontains
+    value: "axis_connection.js"
+    weight: 8
+  - field: http.body
+    op: icontains
+    value: "AXIS M"
+    weight: 6

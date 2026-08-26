@@ -318,6 +318,7 @@ async fn run_enrich(pool: PgPool, config: config::Config) -> Result<()> {
             let enricher = match kind.as_str() {
                 "favicon" => Some(enrich::EnricherKind::Favicon),
                 "rtsp_frame" => Some(enrich::EnricherKind::RtspFrame),
+                "camera_frame" => Some(enrich::EnricherKind::CameraFrame),
                 _ => None,
             };
 

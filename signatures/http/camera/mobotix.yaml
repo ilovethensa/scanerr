@@ -1,0 +1,19 @@
+id: mobotix
+name: MOBOTIX Camera
+category: camera
+tags: [camera, surveillance, iot]
+priority: 90
+condition: any
+matchers:
+  - field: http.body
+    op: icontains
+    value: "MOBOTIX AG"
+    weight: 10
+  - field: http.body
+    op: icontains
+    value: "mobotix.com"
+    weight: 8
+  - field: http.body
+    op: contains
+    value: "content='MOBOTIX AG"
+    weight: 7

@@ -1,9 +1,9 @@
 id: ip-camera-boa
-name: IP Camera
+name: IP Camera (Boa)
 category: camera
 tags: [camera, surveillance, iot]
 priority: 90
-condition: all
+condition: any
 matchers:
   - field: http.header.www-authenticate
     op: icontains
@@ -13,3 +13,15 @@ matchers:
     op: startswith
     value: Boa/
     weight: 3
+  - field: http.header.www-authenticate
+    op: icontains
+    value: "streaming_server"
+    weight: 5
+  - field: http.body
+    op: contains
+    value: "cgi-bin/viewer"
+    weight: 6
+  - field: http.body
+    op: contains
+    value: "getparam.cgi"
+    weight: 5
