@@ -1,0 +1,19 @@
+id: cross-web-dvr
+name: Cross Web DVR
+category: camera
+tags: [camera, surveillance, iot, dvr]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: DVR Components Download
+    weight: 10
+  - field: http.header.server
+    op: equals
+    value: Cross Web Server
+    weight: 8
+  - field: http.body
+    op: contains
+    value: PcamEn.htm
+    weight: 6

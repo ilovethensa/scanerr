@@ -1,0 +1,19 @@
+id: codeigniter
+name: CodeIgniter
+category: framework
+tags: [php, framework]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: A Database Error Occurred
+    weight: 6
+  - field: http.body
+    op: contains
+    value: core/Loader.php
+    weight: 8
+  - field: http.body
+    op: contains
+    value: "Filename: core/"
+    weight: 7

@@ -1,0 +1,19 @@
+id: 3cx-webclient
+name: 3CX Webclient
+category: voip
+tags: [voip, phone, pbx]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: 3CX Webclient
+    weight: 10
+  - field: http.body
+    op: contains
+    value: 3CX
+    weight: 5
+  - field: ssl.subject_cn
+    op: contains
+    value: 3cx.eu
+    weight: 7

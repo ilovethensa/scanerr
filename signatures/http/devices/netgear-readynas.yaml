@@ -1,0 +1,19 @@
+id: netgear-readynas
+name: NETGEAR ReadyNAS
+category: nas
+tags: [nas, storage, netgear]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: NETGEAR ReadyNAS
+    weight: 10
+  - field: http.header.www-authenticate
+    op: contains
+    value: ReadyNAS Admin
+    weight: 8
+  - field: http.body
+    op: contains
+    value: nonadmin_redirect.html
+    weight: 6

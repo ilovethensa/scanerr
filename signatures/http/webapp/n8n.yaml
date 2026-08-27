@@ -1,0 +1,23 @@
+id: n8n
+name: n8n
+category: webapp
+tags: [workflow, automation, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: n8n.io
+    weight: 10
+  - field: http.body
+    op: contains
+    value: n8n Editor-UI
+    weight: 9
+  - field: http.body
+    op: contains
+    value: /rest/config.js
+    weight: 7
+  - field: http.body
+    op: contains
+    value: /static/base-path.js
+    weight: 6

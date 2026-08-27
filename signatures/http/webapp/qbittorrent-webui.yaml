@@ -1,0 +1,23 @@
+id: qbittorrent-webui
+name: qBittorrent WebUI
+category: webapp
+tags: [torrent, p2p, file-sharing]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: qBittorrent WebUI
+    weight: 10
+  - field: http.body
+    op: contains
+    value: qBittorrent32.png
+    weight: 8
+  - field: http.body
+    op: contains
+    value: qBittorrent-tray.svg
+    weight: 7
+  - field: http.body
+    op: contains
+    value: scripts/login.js
+    weight: 6

@@ -1,0 +1,15 @@
+id: linkwarden
+name: Linkwarden
+category: webapp
+tags: [bookmarks, self-hosted, nextjs]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Linkwarden
+    weight: 10
+  - field: http.body
+    op: contains
+    value: defaultLocale
+    weight: 3

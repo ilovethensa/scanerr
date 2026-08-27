@@ -1,0 +1,27 @@
+id: pgadmin4
+name: pgAdmin 4
+category: database
+tags: [postgresql, database, admin]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: pgAdmin 4
+    weight: 10
+  - field: http.body
+    op: contains
+    value: pgadmin.browser.utils
+    weight: 8
+  - field: http.body
+    op: contains
+    value: security.pages
+    weight: 7
+  - field: http.body
+    op: contains
+    value: login_user
+    weight: 6
+  - field: http.cookie
+    op: contains
+    value: pga4_session
+    weight: 5

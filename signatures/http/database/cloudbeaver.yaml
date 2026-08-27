@@ -1,0 +1,23 @@
+id: cloudbeaver
+name: CloudBeaver
+category: database
+tags: [postgresql, database, web-admin, dbeaver]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: pgui.admin_panel
+    weight: 9
+  - field: http.body
+    op: contains
+    value: pgui-login
+    weight: 8
+  - field: http.body
+    op: contains
+    value: /components/js/require-config.js
+    weight: 7
+  - field: http.body
+    op: contains
+    value: main-bundle.js
+    weight: 6

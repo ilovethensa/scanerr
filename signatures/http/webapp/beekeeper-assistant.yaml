@@ -1,0 +1,23 @@
+id: beekeeper-assistant
+name: BeekeeperAssistant
+category: webapp
+tags: [beekeeping, iot, agriculture]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: BeekeeperAssistant
+    weight: 10
+  - field: http.body
+    op: contains
+    value: BeekeeperAssistant
+    weight: 8
+  - field: http.body
+    op: contains
+    value: /img/ba_logo.svg
+    weight: 7
+  - field: http.header.server
+    op: equals
+    value: Kestrel
+    weight: 2

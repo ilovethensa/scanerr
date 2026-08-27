@@ -1,0 +1,19 @@
+id: onlyoffice
+name: ONLYOFFICE
+category: webapp
+tags: [office, collaboration, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: ONLYOFFICE
+    weight: 10
+  - field: http.body
+    op: contains
+    value: ONLYOFFICE
+    weight: 6
+  - field: http.body
+    op: contains
+    value: "og: http://ogp.me/ns#"
+    weight: 4

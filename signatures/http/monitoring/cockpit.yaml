@@ -1,0 +1,19 @@
+id: cockpit
+name: Cockpit
+category: monitoring
+tags: [linux, admin, server-management]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: cockpit_po
+    weight: 10
+  - field: http.body
+    op: contains
+    value: window.environment
+    weight: 6
+  - field: http.body
+    op: contains
+    value: insert_dynamic_content_here
+    weight: 5

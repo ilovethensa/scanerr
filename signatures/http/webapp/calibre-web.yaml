@@ -1,0 +1,23 @@
+id: calibre-web
+name: Calibre-Web
+category: webapp
+tags: [ebooks, library, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: startswith
+    value: Calibre-Web
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Calibre-Web
+    weight: 8
+  - field: http.body
+    op: contains
+    value: uploadprogress.js
+    weight: 6
+  - field: http.body
+    op: contains
+    value: /static/css/libs/bootstrap.min.css
+    weight: 4

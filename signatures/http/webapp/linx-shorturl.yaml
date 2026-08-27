@@ -1,0 +1,19 @@
+id: linx-shorturl
+name: Linx Shorturl
+category: webapp
+tags: [url-shortener, php]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Linx Shorturl
+    weight: 10
+  - field: http.body
+    op: contains
+    value: /shorturl/index.php
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Report Abuse
+    weight: 4

@@ -1,0 +1,19 @@
+id: tenda-router
+name: Tenda Router
+category: networking
+tags: [router, networking, iot]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: "Tenda | LOGIN"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: reasyui.css
+    weight: 6
+  - field: http.header.server
+    op: equals
+    value: GoAhead-Webs
+    weight: 3

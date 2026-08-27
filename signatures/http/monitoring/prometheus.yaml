@@ -1,0 +1,19 @@
+id: prometheus
+name: Prometheus
+category: monitoring
+tags: [monitoring, metrics, time-series]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Prometheus Time Series Collection and Processing Server
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Prometheus Time Series
+    weight: 8
+  - field: http.body
+    op: contains
+    value: ./static/js/main.
+    weight: 5

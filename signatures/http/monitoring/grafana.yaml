@@ -1,0 +1,23 @@
+id: grafana
+name: Grafana
+category: monitoring
+tags: [monitoring, dashboards, visualization]
+priority: 85
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Grafana
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Grafana
+    weight: 5
+  - field: http.body
+    op: contains
+    value: /grafana/
+    weight: 6
+  - field: http.body
+    op: contains
+    value: grafana-app
+    weight: 7
