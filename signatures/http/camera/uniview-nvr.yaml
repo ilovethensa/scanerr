@@ -1,0 +1,23 @@
+id: uniview-nvr
+name: Uniview NVR/DVR
+category: camera
+tags: [camera, surveillance, iot, nvr, dvr, uniview]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: VideoManageSystem
+    weight: 8
+  - field: http.body
+    op: contains
+    value: cgi-bin/main-cgi
+    weight: 6
+  - field: http.body
+    op: contains
+    value: szUserLoginCert
+    weight: 5
+  - field: http.body
+    op: contains
+    value: /LAPI/V1.0/
+    weight: 10

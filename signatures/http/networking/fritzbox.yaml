@@ -1,0 +1,19 @@
+id: fritzbox
+name: AVM FRITZ!Box
+category: networking
+tags: [router, fritzbox, avm, networking]
+priority: 85
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: FRITZ!Box
+    weight: 10
+  - field: http.body
+    op: contains
+    value: avmcore.js
+    weight: 8
+  - field: ssl.subject_cn
+    op: contains
+    value: myfritz.net
+    weight: 9

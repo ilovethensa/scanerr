@@ -1,0 +1,10 @@
+id: orthanc
+name: Orthanc DICOM Server
+category: medical
+tags: [medical, dicom, healthcare]
+priority: 80
+matchers:
+  - field: http.header.www-authenticate
+    op: contains
+    value: Orthanc Secure Area
+    weight: 10

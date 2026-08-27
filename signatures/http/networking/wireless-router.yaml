@@ -1,0 +1,19 @@
+id: generic-wireless-router
+name: Wireless Router
+category: networking
+tags: [router, embedded, networking]
+priority: 50
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Wireless Router
+    weight: 8
+  - field: http.body
+    op: contains
+    value: meta http-equiv="refresh" content="0; url=index.htm"
+    weight: 5
+  - field: http.header.server
+    op: startswith
+    value: Boa/
+    weight: 3

@@ -1,0 +1,10 @@
+id: lwip-device
+name: lwIP Embedded Device
+category: iot
+tags: [iot, embedded, networking]
+priority: 40
+matchers:
+  - field: http.header.server
+    op: contains
+    value: lwIP/
+    weight: 8

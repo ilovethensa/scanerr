@@ -1,0 +1,23 @@
+id: hype-software
+name: hype Software
+category: webapp
+tags: [pos, restaurant, cafe, balkans]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: hype Software©
+    weight: 9
+  - field: http.body
+    op: contains
+    value: webpackChunkhype_software
+    weight: 8
+  - field: http.body
+    op: contains
+    value: hypeSoftware.hype-software.com
+    weight: 7
+  - field: http.body
+    op: contains
+    value: class="landing-loading"
+    weight: 4

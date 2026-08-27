@@ -1,0 +1,19 @@
+id: softether-vpn
+name: SoftEther VPN Server
+category: vpn
+tags: [vpn, networking]
+priority: 85
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: SoftEther VPN Server
+    weight: 10
+  - field: http.body
+    op: contains
+    value: SoftEther VPN Server / Bridge
+    weight: 8
+  - field: ssl.subject_cn
+    op: contains
+    value: softether.net
+    weight: 9

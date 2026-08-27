@@ -1,0 +1,15 @@
+id: danfoss-drd700
+name: Danfoss DRD700
+category: iot
+tags: [industrial, hvac, danfoss, controller]
+priority: 40
+condition: any
+matchers:
+  - field: http.title
+    op: icontains
+    value: DRD700
+    weight: 5
+  - field: http.server
+    op: icontains
+    value: BDOS
+    weight: 4

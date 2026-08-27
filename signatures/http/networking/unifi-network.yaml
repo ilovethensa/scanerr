@@ -1,0 +1,19 @@
+id: unifi-network
+name: UniFi Network Controller
+category: networking
+tags: [router, ubiquiti, unifi, networking]
+priority: 85
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: UniFi Network
+    weight: 10
+  - field: http.body
+    op: contains
+    value: unifi-network-app-container
+    weight: 8
+  - field: ssl.subject_cn
+    op: equals
+    value: UniFi
+    weight: 7

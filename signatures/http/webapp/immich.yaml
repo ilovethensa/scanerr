@@ -1,0 +1,19 @@
+id: immich
+name: Immich
+category: webapp
+tags: [photos, self-hosted, backup]
+priority: 80
+condition: any
+matchers:
+  - field: http.securitytxt
+    op: contains
+    value: Immich
+    weight: 10
+  - field: http.body
+    op: contains
+    value: To use Immich
+    weight: 8
+  - field: http.body
+    op: contains
+    value: immich-ui-theme
+    weight: 7

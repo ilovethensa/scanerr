@@ -1,0 +1,19 @@
+id: sensecap-m1
+name: Seeed SenseCAP M1
+category: iot
+tags: [helium, iot, mining, lora]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: SenseCAP M1
+    weight: 10
+  - field: http.body
+    op: contains
+    value: SenseCAP M1 Local Console
+    weight: 8
+  - field: http.body
+    op: contains
+    value: sensecapmx.com
+    weight: 7

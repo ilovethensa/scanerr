@@ -1,0 +1,14 @@
+id: busybox-router
+name: BusyBox Router
+category: networking
+tags: [router, embedded, networking]
+priority: 40
+matchers:
+  - field: http.body
+    op: contains
+    value: location.replace("cgi-bin/index.cgi")
+    weight: 6
+  - field: http.header.server
+    op: contains
+    value: BusyBox
+    weight: 8

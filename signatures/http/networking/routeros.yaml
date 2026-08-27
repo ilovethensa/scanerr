@@ -6,7 +6,7 @@ priority: 85
 condition: any
 matchers:
   - field: http.title
-    op: equals
+    op: startswith
     value: RouterOS
     weight: 5
   - field: http.body

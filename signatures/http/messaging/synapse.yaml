@@ -1,0 +1,19 @@
+id: synapse
+name: Matrix Synapse
+category: messaging
+tags: [messaging, matrix, chat]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Synapse is running
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Synapse is running
+    weight: 8
+  - field: http.body
+    op: contains
+    value: matrix.org/ecosystem/clients
+    weight: 7

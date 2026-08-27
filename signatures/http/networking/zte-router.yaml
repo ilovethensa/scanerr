@@ -1,0 +1,15 @@
+id: zte-router
+name: ZTE Router
+category: networking
+tags: [router, zte, gpon, networking]
+priority: 40
+condition: any
+matchers:
+  - field: http.server
+    op: icontains
+    value: ZTE web server
+    weight: 5
+  - field: http.body
+    op: icontains
+    value: ZTE
+    weight: 3

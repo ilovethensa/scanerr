@@ -51,6 +51,12 @@ pub enum Operator {
     EndsWith,
     HashEquals,
     Exists,
+    NotContains,
+    NotIcontains,
+    NotRegex,
+    NotEquals,
+    NotStartsWith,
+    NotEndsWith,
 }
 
 // ─── Compiled matcher ─────────────────────────────────────────────────────────
@@ -66,7 +72,7 @@ pub struct CompiledMatcher {
 impl CompiledMatcher {
     pub fn compile(def: &MatcherDef) -> Self {
         let regex = match def.op {
-            Operator::Regex => Regex::new(&def.value).ok(),
+            Operator::Regex | Operator::NotRegex => Regex::new(&def.value).ok(),
             _ => None,
         };
         CompiledMatcher {
@@ -79,8 +85,13 @@ impl CompiledMatcher {
     }
 
     pub fn matches(&self, values: &[String]) -> (bool, u32) {
+        // Negative operators: absence satisfies negation
+        let is_negative = matches!(self.op,
+            Operator::NotContains | Operator::NotIcontains | Operator::NotRegex |
+            Operator::NotEquals | Operator::NotStartsWith | Operator::NotEndsWith
+        );
         if values.is_empty() {
-            return (false, 0);
+            return if is_negative { (true, self.weight) } else { (false, 0) };
         }
         let hit = match self.op {
             Operator::Contains => values.iter().any(|v| v.contains(&self.value)),
@@ -112,6 +123,21 @@ impl CompiledMatcher {
                 })
             }
             Operator::Exists => !values.is_empty(),
+            Operator::NotContains => !values.iter().any(|v| v.contains(&self.value)),
+            Operator::NotIcontains => {
+                let needle = self.value.to_lowercase();
+                !values.iter().any(|v| v.to_lowercase().contains(&needle))
+            }
+            Operator::NotRegex => {
+                if let Some(ref re) = self.regex {
+                    !values.iter().any(|v| re.is_match(v))
+                } else {
+                    true
+                }
+            }
+            Operator::NotEquals => !values.iter().any(|v| v == &self.value),
+            Operator::NotStartsWith => !values.iter().any(|v| v.starts_with(&self.value)),
+            Operator::NotEndsWith => !values.iter().any(|v| v.ends_with(&self.value)),
         };
         if hit { (true, self.weight) } else { (false, 0) }
     }

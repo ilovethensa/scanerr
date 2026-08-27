@@ -1,0 +1,19 @@
+id: openwrt
+name: OpenWrt
+category: networking
+tags: [router, openwrt, firmware, networking]
+priority: 40
+condition: any
+matchers:
+  - field: http.body
+    op: icontains
+    value: luci-static
+    weight: 5
+  - field: http.body
+    op: icontains
+    value: cgi-bin/luci
+    weight: 4
+  - field: http.header.server
+    op: startswith
+    value: uhttpd/
+    weight: 6

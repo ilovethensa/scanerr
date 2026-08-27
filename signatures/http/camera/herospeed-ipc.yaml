@@ -1,0 +1,19 @@
+id: herospeed-ipc
+name: Herospeed IPC
+category: camera
+tags: [camera, surveillance, iot]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: Herospeed Technology Limited
+    weight: 10
+  - field: http.title
+    op: equals
+    value: IPC
+    weight: 3
+  - field: http.body
+    op: contains
+    value: LAB.min.js
+    weight: 2

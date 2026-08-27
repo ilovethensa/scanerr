@@ -1,0 +1,23 @@
+id: hitarget-vnet
+name: Hi-Target VNet CORS
+category: gnss
+tags: [gnss, cors, rtk, survey, iot]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: VNet10
+    weight: 10
+  - field: http.body
+    op: contains
+    value: CustomConfig
+    weight: 6
+  - field: http.body
+    op: contains
+    value: displayIndexCGI
+    weight: 5
+  - field: http.body
+    op: contains
+    value: IndexDelCookie
+    weight: 5

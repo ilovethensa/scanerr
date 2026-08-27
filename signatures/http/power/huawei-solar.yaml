@@ -1,0 +1,27 @@
+id: huawei-solar
+name: Huawei Solar
+category: power
+tags: [iot, power, solar, inverter]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: icontains
+    value: Huawei SmartPV
+    weight: 10
+  - field: http.body
+    op: icontains
+    value: huawei.com/solar
+    weight: 9
+  - field: http.body
+    op: icontains
+    value: SUN2000
+    weight: 8
+  - field: http.body
+    op: icontains
+    value: FusionSolar
+    weight: 8
+  - field: http.body
+    op: icontains
+    value: SmartLogger
+    weight: 6

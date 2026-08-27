@@ -1,0 +1,27 @@
+id: generic-dvr-nvr
+name: DVR/NVR Web Interface
+category: camera
+tags: [camera, surveillance, iot, dvr, nvr]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: dvrocx
+    weight: 8
+  - field: http.body
+    op: contains
+    value: hybriddvr_plugin
+    weight: 7
+  - field: http.body
+    op: contains
+    value: RSVideoOcx
+    weight: 6
+  - field: http.body
+    op: contains
+    value: pluginVersion.js
+    weight: 6
+  - field: http.body
+    op: contains
+    value: VideoPlayTool://
+    weight: 7

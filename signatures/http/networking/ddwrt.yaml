@@ -1,0 +1,19 @@
+id: ddwrt
+name: DD-WRT
+category: networking
+tags: [router, firmware, networking, openwrt]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: startswith
+    value: DD-WRT
+    weight: 10
+  - field: http.body
+    op: contains
+    value: DD-WRT Control Panel
+    weight: 8
+  - field: http.body
+    op: contains
+    value: paypal@dd-wrt.com
+    weight: 7

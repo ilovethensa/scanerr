@@ -25,3 +25,15 @@ matchers:
     op: contains
     value: /browserJudge.js
     weight: 3
+  - field: http.body
+    op: contains
+    value: dhvideowhmode
+    weight: 8
+  - field: http.body
+    op: contains
+    value: jsCore/app
+    weight: 6
+  - field: http.body
+    op: contains
+    value: GB35114
+    weight: 5

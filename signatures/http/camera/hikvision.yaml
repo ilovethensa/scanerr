@@ -29,3 +29,11 @@ matchers:
     op: icontains
     value: childDevID
     weight: 3
+  - field: http.body
+    op: contains
+    value: "Access Error:"
+    weight: 7
+  - field: http.body
+    op: contains
+    value: "Can't locate document:"
+    weight: 6

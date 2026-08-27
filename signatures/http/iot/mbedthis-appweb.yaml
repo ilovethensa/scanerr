@@ -1,0 +1,10 @@
+id: mbedthis-appweb
+name: Mbedthis Appweb
+category: iot
+tags: [embedded, iot]
+priority: 40
+matchers:
+  - field: http.header.server
+    op: contains
+    value: Mbedthis-Appweb
+    weight: 8

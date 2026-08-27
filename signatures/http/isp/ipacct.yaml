@@ -1,18 +1,27 @@
 id: ipacct
 name: IPACCT
 category: isp
-tags: [isp, billing]
+tags: [isp, billing, captive-portal]
 priority: 80
+condition: any
 matchers:
   - field: http.body
     op: icontains
     value: IPACCT
-    weight: 5
+    weight: 8
   - field: http.body
     op: icontains
     value: IPBILL
-    weight: 4
+    weight: 5
   - field: http.title
     op: icontains
     value: IPBILL
+    weight: 5
+  - field: http.body
+    op: contains
+    value: "/0/up/"
+    weight: 6
+  - field: http.title
+    op: equals
+    value: "Please wait, the page is opening..."
     weight: 4

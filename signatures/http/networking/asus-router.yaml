@@ -1,0 +1,23 @@
+id: asus-router
+name: ASUS Router
+category: networking
+tags: [router, asus, networking]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: Main_Login.asp
+    weight: 8
+  - field: http.header.server
+    op: equals
+    value: httpd/3.0
+    weight: 5
+  - field: ssl.subject_cn
+    op: contains
+    value: Server Certificate
+    weight: 3
+  - field: ssl.subject_cn
+    op: contains
+    value: Root Certificate
+    weight: 3

@@ -1,0 +1,14 @@
+id: smart-tv-cast
+name: Smart TV Cast Device
+category: iot
+tags: [tv, casting, iot]
+priority: 40
+matchers:
+  - field: ssl.issuer_cn
+    op: contains
+    value: TV
+    weight: 5
+  - field: ssl.issuer_cn
+    op: contains
+    value: Cast ICA
+    weight: 8

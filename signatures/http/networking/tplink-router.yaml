@@ -5,22 +5,10 @@ tags: [router, networking, iot]
 priority: 85
 condition: any
 matchers:
-  - field: http.body
+  - field: http.header.www-authenticate
     op: contains
-    value: AX80v1
-    weight: 5
-  - field: http.body
-    op: contains
-    value: tpEncrypt.new.js
-    weight: 8
-  - field: http.body
-    op: contains
-    value: $.su.language
-    weight: 6
-  - field: http.body
-    op: contains
-    value: tpEncrypt
-    weight: 5
+    value: TP-LINK
+    weight: 25
   - field: http.body
     op: contains
     value: tplinklogin.net
@@ -29,3 +17,23 @@ matchers:
     op: contains
     value: tplinkwifi.net
     weight: 8
+  - field: http.body
+    op: contains
+    value: tpEncrypt.new.js
+    weight: 8
+  - field: http.body
+    op: contains
+    value: AX80v1
+    weight: 2
+  - field: http.body
+    op: contains
+    value: $.su.language
+    weight: 2
+  - field: http.body
+    op: contains
+    value: tpEncrypt
+    weight: 2
+  - field: http.header.server
+    op: equals
+    value: Router Webserver
+    weight: 2

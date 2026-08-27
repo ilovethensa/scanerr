@@ -1,0 +1,10 @@
+id: kubernetes-ingress-controller
+name: Kubernetes Ingress Controller
+category: infrastructure
+tags: [kubernetes, k8s, ingress, nginx]
+priority: 40
+matchers:
+  - field: ssl.subject_cn
+    op: contains
+    value: Kubernetes Ingress Controller Fake Certificate
+    weight: 5

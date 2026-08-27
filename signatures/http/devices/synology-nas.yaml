@@ -1,0 +1,19 @@
+id: synology-nas
+name: Synology NAS
+category: device
+tags: [nas, synology, storage]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: icontains
+    value: synology
+    weight: 5
+  - field: http.header.content-security-policy
+    op: icontains
+    value: synology.com
+    weight: 4
+  - field: http.body
+    op: icontains
+    value: synowebapi
+    weight: 3

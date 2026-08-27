@@ -1,0 +1,19 @@
+id: gira-homeserver
+name: Gira HomeServer
+category: smarthome
+tags: [smarthome, knx, building-automation, iot]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Gira HomeServer
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Gira HomeServer
+    weight: 8
+  - field: http.body
+    op: contains
+    value: /hsknxkeys
+    weight: 6

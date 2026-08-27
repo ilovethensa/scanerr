@@ -51,6 +51,7 @@ pub fn resolve(
 fn evaluate(sig: &CompiledSignature, evidence: &crate::evidence::Evidence) -> MatchResult {
     let mut total_score = 0u32;
     let mut matched_count = 0u32;
+    let mut best_match_weight = 0u32;
 
     for m in &sig.matchers {
         let values = evidence.values(&m.field);
@@ -58,6 +59,9 @@ fn evaluate(sig: &CompiledSignature, evidence: &crate::evidence::Evidence) -> Ma
         if hit {
             total_score += weight;
             matched_count += 1;
+            if weight > best_match_weight {
+                best_match_weight = weight;
+            }
         }
     }
 
@@ -66,8 +70,24 @@ fn evaluate(sig: &CompiledSignature, evidence: &crate::evidence::Evidence) -> Ma
         MatchCondition::All => matched_count == sig.matchers.len() as u32,
     };
 
-    let confidence = if sig_matched && sig.total_weight() > 0 {
-        ((total_score as f64 / sig.total_weight() as f64) * 100.0) as u8
+    let confidence = if sig_matched {
+        match sig.condition {
+            MatchCondition::Any => {
+                // For "any" condition: confidence driven by the strongest single match.
+                // A definitive matcher (e.g. brand name in a header) should stand on its own.
+                let max_weight = sig.matchers.iter().map(|m| m.weight).max().unwrap_or(1);
+                ((best_match_weight as f64 / max_weight as f64) * 100.0) as u8
+            }
+            MatchCondition::All => {
+                // For "all" condition: confidence is coverage across all matchers.
+                let total = sig.total_weight();
+                if total > 0 {
+                    ((total_score as f64 / total as f64) * 100.0) as u8
+                } else {
+                    0
+                }
+            }
+        }
     } else {
         0
     };

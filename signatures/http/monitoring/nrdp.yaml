@@ -1,0 +1,14 @@
+id: nrdp
+name: NRDP
+category: monitoring
+tags: [monitoring, nagios, alerting]
+priority: 80
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: NRDP/
+    weight: 10
+  - field: http.body
+    op: equals
+    value: status=ok
+    weight: 4

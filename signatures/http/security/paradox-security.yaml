@@ -1,0 +1,19 @@
+id: paradox-security
+name: Paradox Security Panel
+category: security
+tags: [alarm, access-control, security, iot]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: IP module web page feature
+    weight: 8
+  - field: http.body
+    op: contains
+    value: login_page.html
+    weight: 3
+  - field: http.body
+    op: contains
+    value: commun.js
+    weight: 3

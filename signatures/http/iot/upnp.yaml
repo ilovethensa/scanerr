@@ -1,0 +1,15 @@
+id: upnp
+name: UPnP Device
+category: iot
+tags: [upnp, iot, embedded]
+priority: 40
+condition: any
+matchers:
+  - field: http.header.server
+    op: contains
+    value: Portable SDK for UPnP devices
+    weight: 8
+  - field: http.header.server
+    op: contains
+    value: UPnP/
+    weight: 5
