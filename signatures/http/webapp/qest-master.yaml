@@ -1,0 +1,19 @@
+id: qest-master
+name: Qest Master
+category: webapp
+tags: [proxy, rate-limiting]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: "Qest Master!"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Qest Master
+    weight: 8
+  - field: http.body
+    op: contains
+    value: mlazarov
+    weight: 5

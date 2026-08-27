@@ -1,0 +1,23 @@
+id: sophos-ssl-vpn
+name: Sophos SSL VPN
+category: vpn
+tags: [vpn, firewall, sophos]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: Language.Username
+    weight: 8
+  - field: http.body
+    op: contains
+    value: group-small-on-dark.png
+    weight: 9
+  - field: http.body
+    op: contains
+    value: callLogin()
+    weight: 6
+  - field: http.body
+    op: contains
+    value: loginuserportal()
+    weight: 7

@@ -1,0 +1,19 @@
+id: alvis
+name: ALVIS
+category: webapp
+tags: [erp, valuation, business-app]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: ALVIS
+    weight: 10
+  - field: http.body
+    op: contains
+    value: alvisnumber.js
+    weight: 8
+  - field: http.body
+    op: contains
+    value: alvis-logo.png
+    weight: 7

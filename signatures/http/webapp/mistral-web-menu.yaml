@@ -1,0 +1,19 @@
+id: mistral-web-menu
+name: Mistral Web Menu
+category: webapp
+tags: [business-app]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: "web menu by Mistral Software"
+    weight: 10
+  - field: http.title
+    op: equals
+    value: "Web Menu"
+    weight: 6
+  - field: http.body
+    op: contains
+    value: sidebar-body
+    weight: 3

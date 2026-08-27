@@ -1,0 +1,19 @@
+id: adguard-home
+name: AdGuard Home
+category: networking
+tags: [dns, adblock, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: "#67B279"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: "prefers-color-scheme: dark"
+    weight: 4
+  - field: http.body
+    op: contains
+    value: login.js
+    weight: 3

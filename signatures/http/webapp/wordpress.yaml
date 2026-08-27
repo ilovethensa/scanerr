@@ -2,14 +2,26 @@ id: wordpress
 name: WordPress
 category: webapp
 tags: [cms, php]
-priority: 80
+priority: 85
 condition: any
 matchers:
+  - field: http.title
+    op: startswith
+    value: "WordPress"
+    weight: 10
   - field: http.body
     op: contains
     value: wp-content
-    weight: 5
+    weight: 6
   - field: http.body
     op: contains
     value: wp-includes
-    weight: 5
+    weight: 6
+  - field: http.body
+    op: contains
+    value: /wp-login.php
+    weight: 8
+  - field: http.body
+    op: contains
+    value: wp-die-message
+    weight: 9

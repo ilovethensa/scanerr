@@ -1,0 +1,31 @@
+id: cmailpro
+name: cMailPro
+category: mail
+tags: [webmail, mail]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: cMailPro
+    weight: 10
+  - field: http.title
+    op: equals
+    value: "Pronto!"
+    weight: 8
+  - field: http.body
+    op: contains
+    value: cmailpro.net/Pronto
+    weight: 7
+  - field: http.body
+    op: contains
+    value: pronto-login
+    weight: 6
+  - field: http.body
+    op: contains
+    value: SkinFiles/
+    weight: 5
+  - field: http.body
+    op: contains
+    value: externalError
+    weight: 4

@@ -1,0 +1,19 @@
+id: cambium-epmp
+name: Cambium ePMP
+category: networking
+tags: [wireless, isp, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: ePMP
+    weight: 10
+  - field: http.header.server
+    op: equals
+    value: Cambium HTTP Server
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Cambium ePMP
+    weight: 7

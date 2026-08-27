@@ -1,0 +1,19 @@
+id: jitsi-meet
+name: Jitsi Meet
+category: conferencing
+tags: [video, conferencing, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Jitsi Meet
+    weight: 10
+  - field: http.body
+    op: contains
+    value: schema.org/Product
+    weight: 4
+  - field: http.body
+    op: contains
+    value: theme-color
+    weight: 2

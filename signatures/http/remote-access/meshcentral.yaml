@@ -1,0 +1,15 @@
+id: meshcentral
+name: MeshCentral
+category: remote-access
+tags: [remote-access, management, iot]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: MeshCentral
+    weight: 10
+  - field: http.body
+    op: contains
+    value: MeshCentral
+    weight: 6

@@ -1,0 +1,19 @@
+id: pfsense
+name: pfSense
+category: vpn
+tags: [firewall, vpn, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: startswith
+    value: "pfSense"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: login.css
+    weight: 4
+  - field: ssl.subject_cn
+    op: startswith
+    value: pfSense
+    weight: 8

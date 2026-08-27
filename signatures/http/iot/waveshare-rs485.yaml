@@ -1,0 +1,19 @@
+id: waveshare-rs485
+name: Waveshare RS485 to Ethernet
+category: iot
+tags: [iot, converter, industrial]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: RS485 TO ETH
+    weight: 10
+  - field: http.body
+    op: contains
+    value: waveshare.com
+    weight: 7
+  - field: http.body
+    op: contains
+    value: /ip_en.html
+    weight: 5

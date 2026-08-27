@@ -1,0 +1,19 @@
+id: fastpanel
+name: FASTPANEL
+category: hosting
+tags: [hosting, control-panel]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: FASTPANEL
+    weight: 10
+  - field: http.body
+    op: contains
+    value: FASTPANEL
+    weight: 6
+  - field: http.body
+    op: contains
+    value: window-main
+    weight: 4

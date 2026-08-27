@@ -1,0 +1,15 @@
+id: router-web-mgmt
+name: Router Web Management System
+category: networking
+tags: [router, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: "ROUTER Web Management System"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: router_web doesn't work properly
+    weight: 8

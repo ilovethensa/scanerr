@@ -8,8 +8,16 @@ matchers:
   - field: http.title
     op: startswith
     value: RouterOS
-    weight: 5
+    weight: 8
   - field: http.body
     op: icontains
     value: mikrotik_logo
+    weight: 6
+  - field: http.header.server
+    op: contains
+    value: Mikrotik
+    weight: 10
+  - field: http.body
+    op: contains
+    value: cache administrator is
     weight: 4
