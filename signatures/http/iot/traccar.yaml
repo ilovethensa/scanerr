@@ -1,0 +1,15 @@
+id: traccar
+name: Traccar GPS Tracking
+category: iot
+tags: [gps, tracking, fleet]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Traccar
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Traccar GPS Tracking System
+    weight: 8

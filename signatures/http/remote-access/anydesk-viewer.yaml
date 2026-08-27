@@ -1,0 +1,19 @@
+id: anydesk-viewer
+name: AnyDesk Viewer
+category: remote-access
+tags: [remote-desktop, anydesk, rustdesk]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Anydesk Viewer
+    weight: 8
+  - field: http.body
+    op: contains
+    value: AnyDesk ID
+    weight: 7
+  - field: http.body
+    op: contains
+    value: RustDesk ID
+    weight: 6

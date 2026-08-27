@@ -1,0 +1,10 @@
+id: home-gateway
+name: Home Gateway
+category: networking
+tags: [router, gateway, networking, isp]
+priority: 60
+matchers:
+  - field: http.header.server
+    op: equals
+    value: HomeGateway
+    weight: 8

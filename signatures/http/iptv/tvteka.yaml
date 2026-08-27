@@ -1,0 +1,15 @@
+id: tvteka
+name: TVteka
+category: iptv
+tags: [iptv, streaming, bulgarian]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: TVteka
+    weight: 10
+  - field: http.body
+    op: contains
+    value: TVteka
+    weight: 8

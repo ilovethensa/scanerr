@@ -1,0 +1,19 @@
+id: phpmyadmin
+name: phpMyAdmin
+category: database
+tags: [database, mysql, admin]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: phpMyAdmin
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Welcome to phpMyAdmin
+    weight: 8
+  - field: http.cookie
+    op: contains
+    value: phpMyAdmin=
+    weight: 7

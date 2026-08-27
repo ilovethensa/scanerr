@@ -1,0 +1,19 @@
+id: vmware-esxi
+name: VMware ESXi
+category: virtualization
+tags: [virtualization, vmware, hypervisor]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: ESXi Host Client
+    weight: 10
+  - field: ssl.issuer_cn
+    op: contains
+    value: VMware
+    weight: 8
+  - field: http.body
+    op: contains
+    value: esxUiApp
+    weight: 7

@@ -1,0 +1,15 @@
+id: olt-web
+name: OLT Web Management
+category: networking
+tags: [olt, fiber, networking, isp]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: OLT Web Management Interface
+    weight: 10
+  - field: http.body
+    op: contains
+    value: window.top.location.href="login.html"
+    weight: 6

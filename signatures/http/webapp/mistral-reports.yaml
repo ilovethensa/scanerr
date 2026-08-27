@@ -1,0 +1,15 @@
+id: mistral-reports
+name: Mistral Reports
+category: webapp
+tags: [reports, analytics, bulgarian]
+priority: 70
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Mistral Reports
+    weight: 10
+  - field: http.body
+    op: contains
+    value: MistralReports
+    weight: 8

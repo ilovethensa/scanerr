@@ -1,0 +1,11 @@
+id: omada-controller
+name: TP-Link Omada Controller
+category: networking
+tags: [networking, omada, tplink, sdn]
+priority: 85
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: Omada Controller
+    weight: 10

@@ -1,0 +1,19 @@
+id: hestia-cp
+name: Hestia Control Panel
+category: hosting
+tags: [hosting, control-panel, vestacp]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Hestia Control Panel
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Hestia Control Panel
+    weight: 8
+  - field: http.cookie
+    op: contains
+    value: HESTIASID
+    weight: 7

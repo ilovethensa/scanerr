@@ -1,0 +1,19 @@
+id: geovision-webcam
+name: GeoVision Webcam
+category: camera
+tags: [camera, surveillance, iot, webcam]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: equals
+    value: GeoHttpServer
+    weight: 10
+  - field: http.body
+    op: contains
+    value: webcam_login
+    weight: 7
+  - field: http.body
+    op: contains
+    value: IDS_WEB_WEBCAM_LOGIN
+    weight: 6
