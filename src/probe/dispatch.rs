@@ -23,6 +23,7 @@ pub async fn probe(
     transport: &str,
     _user_agent: &str,
     geoip_db: Option<&str>,
+    asn_db: Option<&str>,
     engine: &Engine,
 ) -> Result<ProbeResult> {
     let clean_ip = ip_str.split('/').next().unwrap_or(ip_str);
@@ -58,6 +59,20 @@ pub async fn probe(
                 "UPDATE hosts SET country_code = COALESCE($1, country_code), last_seen = $2 WHERE id = $3",
             )
             .bind(&info.country_code)
+            .bind(now())
+            .bind(host_id)
+            .execute(pool)
+            .await?;
+        }
+    }
+
+    if let Some(db_path) = asn_db {
+        if let Ok(info) = geoip::lookup_asn(clean_ip, db_path) {
+            sqlx::query(
+                "UPDATE hosts SET asn = COALESCE($1, asn), org = COALESCE($2, org), last_seen = $3 WHERE id = $4",
+            )
+            .bind(info.asn.map(|n| n as i64))
+            .bind(&info.org)
             .bind(now())
             .bind(host_id)
             .execute(pool)

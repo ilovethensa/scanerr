@@ -88,6 +88,7 @@ pub struct ProbeConfig {
     pub timeout_secs: u64,
     pub user_agent: String,
     pub geoip_db_path: Option<String>,
+    pub asn_db_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -167,6 +168,7 @@ impl Default for Config {
                 timeout_secs: 5,
                 user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36".into(),
                 geoip_db_path: None,
+                asn_db_path: None,
             },
             enrich: EnrichConfig {
                 enabled: vec!["favicon".into()],

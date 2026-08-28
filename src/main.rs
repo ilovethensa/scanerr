@@ -259,6 +259,7 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
     let probe_queue = queue::LeasedQueue::new("queue_service_probes");
     let user_agent = config.probe.user_agent.clone();
     let geoip_db = config.probe.geoip_db_path.clone();
+    let asn_db = config.probe.asn_db_path.clone();
     let probe_timeout = std::time::Duration::from_secs(config.probe.timeout_secs);
 
     let now = || {
@@ -291,6 +292,7 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
                     &transport,
                     &user_agent,
                     geoip_db.as_deref(),
+                    asn_db.as_deref(),
                     &engine,
                 ),
             ).await {
