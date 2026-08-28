@@ -22,7 +22,7 @@ echo "==> Copying project files into VM..."
 tar czf /tmp/scanerr-deploy.tar.gz docker-compose.yml postgres.conf scanerr.toml ranges.txt templates/ assets/ migrations/
 scp /tmp/scanerr-deploy.tar.gz "${VM_HOST}:/tmp/scanerr-deploy.tar.gz"
 rm /tmp/scanerr-deploy.tar.gz
-ssh "$VM_HOST" "mkdir -p $VM_DIR && cd $VM_DIR && tar xzf /tmp/scanerr-deploy.tar.gz && rm /tmp/scanerr-deploy.tar.gz && sed -i 's/127.0.0.1:8080/0.0.0.0:8080/' scanerr.toml && sed -i '/geoip_db_path/d' scanerr.toml"
+ssh "$VM_HOST" "mkdir -p $VM_DIR && cd $VM_DIR && tar xzf /tmp/scanerr-deploy.tar.gz && rm /tmp/scanerr-deploy.tar.gz && sed -i 's/127.0.0.1:8080/0.0.0.0:8080/' scanerr.toml"
 
 echo "==> Restarting containers..."
 ssh "$VM_HOST" "cd $VM_DIR && docker compose up -d --force-recreate"

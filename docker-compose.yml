@@ -83,6 +83,7 @@ services:
     network_mode: host
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
+      - ./GeoLite2-City.mmdb:/app/GeoLite2-City.mmdb:ro
     deploy:
       replicas: 4
       resources:
