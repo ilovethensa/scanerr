@@ -63,7 +63,7 @@ services:
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
     deploy:
-      replicas: 2
+      replicas: 4
       resources:
         limits:
           cpus: '0.8'
@@ -84,7 +84,7 @@ services:
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
     deploy:
-      replicas: 2
+      replicas: 4
       resources:
         limits:
           cpus: '0.5'
