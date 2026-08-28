@@ -1,6 +1,7 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
+#[derive(Clone)]
 pub struct LeasedQueue {
     table: &'static str,
 }

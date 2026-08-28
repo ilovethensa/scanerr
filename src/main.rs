@@ -281,42 +281,52 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
         }
 
         for (id, ip_str, port, transport) in items {
-            info!("Probing {}:{}", ip_str, port);
+            let pool = pool.clone();
+            let user_agent = user_agent.clone();
+            let geoip_db = geoip_db.clone();
+            let asn_db = asn_db.clone();
+            let engine = engine.clone();
+            let probe_queue = probe_queue.clone();
+            let probe_timeout = probe_timeout;
 
-            match tokio::time::timeout(
-                probe_timeout,
-                probe::dispatch::probe(
-                    &pool,
-                    &ip_str,
-                    port as u16,
-                    &transport,
-                    &user_agent,
-                    geoip_db.as_deref(),
-                    asn_db.as_deref(),
-                    &engine,
-                ),
-            ).await {
-                Ok(Ok(result)) => {
-                    match probe::dispatch::upsert_service(&pool, &result).await {
-                        Ok(service_id) => {
-                            let _ = probe::dispatch::maybe_enqueue_enrichments(
-                                &pool, service_id, &result.data,
-                            ).await;
-                            info!("Probed {}:{} -> service_id={}", ip_str, port, service_id);
+            tokio::spawn(async move {
+                info!("Probing {}:{}", ip_str, port);
+
+                match tokio::time::timeout(
+                    probe_timeout,
+                    probe::dispatch::probe(
+                        &pool,
+                        &ip_str,
+                        port as u16,
+                        &transport,
+                        &user_agent,
+                        geoip_db.as_deref(),
+                        asn_db.as_deref(),
+                        &engine,
+                    ),
+                ).await {
+                    Ok(Ok(result)) => {
+                        match probe::dispatch::upsert_service(&pool, &result).await {
+                            Ok(service_id) => {
+                                let _ = probe::dispatch::maybe_enqueue_enrichments(
+                                    &pool, service_id, &result.data,
+                                ).await;
+                                info!("Probed {}:{} -> service_id={}", ip_str, port, service_id);
+                            }
+                            Err(e) => tracing::error!("Failed to upsert service: {}", e),
                         }
-                        Err(e) => tracing::error!("Failed to upsert service: {}", e),
+                        let _ = probe_queue.complete(&pool, id).await;
                     }
-                    let _ = probe_queue.complete(&pool, id).await;
+                    Ok(Err(e)) => {
+                        tracing::error!("Probe failed for {}:{}: {}", ip_str, port, e);
+                        let _ = probe_queue.complete(&pool, id).await;
+                    }
+                    Err(_) => {
+                        tracing::warn!("Probe timed out for {}:{}", ip_str, port);
+                        let _ = probe_queue.complete(&pool, id).await;
+                    }
                 }
-                Ok(Err(e)) => {
-                    tracing::error!("Probe failed for {}:{}: {}", ip_str, port, e);
-                    let _ = probe_queue.complete(&pool, id).await;
-                }
-                Err(_) => {
-                    tracing::warn!("Probe timed out for {}:{}", ip_str, port);
-                    let _ = probe_queue.complete(&pool, id).await;
-                }
-            }
+            });
         }
     }
 }
