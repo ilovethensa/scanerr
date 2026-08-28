@@ -162,15 +162,19 @@ impl ProbeRegistry {
         port: u16,
         user_agent: &str,
     ) -> Result<ServiceData> {
-        // 1. Connect and read banner
-        let connect_result = read_banner(ip, port).await;
-        let banner = match connect_result {
-            Ok(b) => b,
-            Err(_) => {
-                // Connection refused or timed out — port is firewalled
-                let mut data = ServiceData::default();
-                data.kind = "firewalled".into();
-                return Ok(data);
+        let is_https_port = port == 443 || port == 8443;
+
+        // 1. Connect and read banner (skip for well-known HTTPS ports)
+        let banner = if is_https_port {
+            Vec::new()
+        } else {
+            match read_banner(ip, port).await {
+                Ok(b) => b,
+                Err(_) => {
+                    let mut data = ServiceData::default();
+                    data.kind = "firewalled".into();
+                    return Ok(data);
+                }
             }
         };
 
@@ -233,7 +237,15 @@ fn probe_priority(proto: Protocol) -> u32 {
 }
 
 async fn read_banner(ip: &str, port: u16) -> Result<Vec<u8>> {
-    let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).await?;
+    let stream = tokio::time::timeout(
+        std::time::Duration::from_secs(3),
+        TcpStream::connect(format!("{}:{}", ip, port)),
+    )
+    .await
+    .map_err(|_| anyhow::anyhow!("connect timeout"))?
+    .map_err(|e| anyhow::anyhow!("connect failed: {}", e))?;
+
+    let mut stream = stream;
     stream.set_nodelay(true)?;
 
     let mut buf = [0u8; 4096];
@@ -252,16 +264,26 @@ async fn try_http_fallback(
     port: u16,
     user_agent: &str,
 ) -> Result<ServiceData> {
-    // Try plain HTTP first
-    if let Ok(data) = super::http::probe_http("http", ip, port, user_agent).await {
+    // On well-known HTTPS ports, try HTTPS first to avoid wasting time on HTTP
+    let is_https_port = port == 443 || port == 8443;
+    let (first, second) = if is_https_port {
+        ("https", "http")
+    } else {
+        ("http", "https")
+    };
+
+    if let Ok(data) = super::http::probe_http(first, ip, port, user_agent).await {
         return Ok(data);
     }
-    // Then HTTPS
-    if let Ok(data) = super::http::probe_http("https", ip, port, user_agent).await {
+    if let Ok(data) = super::http::probe_http(second, ip, port, user_agent).await {
         return Ok(data);
     }
-    // Then raw TLS (cert data only)
-    if let Ok((_, ssl_data)) = super::tls::tls_connect(ip, port).await {
+
+    // Then raw TLS (cert data only), with a timeout
+    if let Ok(Ok((_, ssl_data))) = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        super::tls::tls_connect(ip, port),
+    ).await {
         let mut data = ServiceData::default();
         data.kind = "tls".into();
         if ssl_data.subject_cn.is_some() || ssl_data.issuer_cn.is_some() {
