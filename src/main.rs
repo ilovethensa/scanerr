@@ -222,8 +222,9 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
             let ports = ports.clone();
             let host_queue = host_queue.clone();
             let threshold = config.scanner.honeypot_port_threshold;
+            let rt = tokio::runtime::Handle::current();
 
-            tokio::spawn(async move {
+            tokio::task::spawn_blocking(move || {
                 info!("Deep scanning {}", ip_str);
                 let results = masscan::run_stage2(&ip_str, &ports, rate)
                     .unwrap_or_default();
@@ -233,24 +234,23 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
                         "Skipping {} — {} open ports exceeds honeypot threshold ({})",
                         ip_str, results.len(), threshold
                     );
-                    let _ = sqlx::query(
+                    let _ = rt.block_on(sqlx::query(
                         "UPDATE hosts SET is_honeypot = true WHERE ip = $1",
                     )
                     .bind(&ip_str)
-                    .execute(&pool)
-                    .await;
-                    let _ = host_queue.complete(&pool, id).await;
+                    .execute(&pool));
+                    let _ = rt.block_on(host_queue.complete(&pool, id));
                     return;
                 }
 
                 for result in &results {
-                    if let Err(e) = queue::insert_service_probe(&pool, &result.ip, result.port as i32, "tcp").await {
+                    if let Err(e) = rt.block_on(queue::insert_service_probe(&pool, &result.ip, result.port as i32, "tcp")) {
                         tracing::error!("Failed to insert service probe: {}", e);
                     }
                 }
                 info!("Deep scan {}: found {} open ports", ip_str, results.len());
 
-                let _ = host_queue.complete(&pool, id).await;
+                let _ = rt.block_on(host_queue.complete(&pool, id));
             });
         }
     }
