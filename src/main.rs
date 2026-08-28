@@ -159,11 +159,10 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
     let ranges = scanner.ranges.clone();
     let ports = scanner.discovery_ports.clone();
     let rate = scanner.discovery_rate;
-    let chunk_size = scanner.sweep_chunk_size;
 
     loop {
-        for chunk in ranges.chunks(chunk_size) {
-            // Wait while backpressured — retry the same chunk, never skip it
+        for range in &ranges {
+            // Wait while backpressured — retry the same range, never skip it
             loop {
                 match queue::backpressure_active(&pool, scanner.max_probe_queue_depth).await {
                     Ok(true) => {
@@ -174,8 +173,8 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
                 }
             }
 
-            info!("Sweeping {} ranges", chunk.len());
-            let results = masscan::run_stage1_batch(chunk, &ports, rate)
+            info!("Sweeping {}", range);
+            let results = masscan::run_stage1_batch(&[range.clone()], &ports, rate)
                 .unwrap_or_default();
 
             let mut inserted = 0u64;
