@@ -215,7 +215,7 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
     loop {
         let t = now();
 
-        let items = host_queue.claim_host_scans(&pool, 3, t).await
+        let items = host_queue.claim_host_scans(&pool, 2, t).await
             .unwrap_or_default();
 
         if items.is_empty() {

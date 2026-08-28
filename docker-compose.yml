@@ -67,7 +67,7 @@ services:
       resources:
         limits:
           cpus: '1.0'
-          memory: 1g
+          memory: 2g
 
   probe:
     image: scanerr-app
