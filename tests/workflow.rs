@@ -108,6 +108,7 @@ async fn test_full_workflow(pool: sqlx::PgPool) {
         probe_transport,
         "scanerr-test/1.0",
         None, // no GeoIP
+        None, // no ASN
         &engine,
     )
     .await

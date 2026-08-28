@@ -159,6 +159,7 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
     let ranges = scanner.ranges.clone();
     let ports = scanner.discovery_ports.clone();
     let rate = scanner.discovery_rate;
+    let rt = tokio::runtime::Handle::current();
 
     loop {
         for range in &ranges {
@@ -174,12 +175,18 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
             }
 
             info!("Sweeping {}", range);
-            let results = masscan::run_stage1_batch(&[range.clone()], &ports, rate)
-                .unwrap_or_default();
+            let range_clone = range.clone();
+            let ports_clone = ports.clone();
+            let results = tokio::task::spawn_blocking(move || {
+                masscan::run_stage1_batch(&[range_clone], &ports_clone, rate)
+            })
+            .await
+            .unwrap_or(Ok(vec![]))
+            .unwrap_or_default();
 
             let mut inserted = 0u64;
             for result in &results {
-                if let Err(e) = queue::insert_host_scan(&pool, &result.ip).await {
+                if let Err(e) = rt.block_on(queue::insert_host_scan(&pool, &result.ip)) {
                     tracing::error!("Failed to insert host scan {}: {}", result.ip, e);
                 } else {
                     inserted += 1;
@@ -213,7 +220,7 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
             .unwrap_or_default();
 
         if items.is_empty() {
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             continue;
         }
 
@@ -278,7 +285,7 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
             .unwrap_or_default();
 
         if items.is_empty() {
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             continue;
         }
 
@@ -352,7 +359,7 @@ async fn run_enrich(pool: PgPool, config: config::Config) -> Result<()> {
             .unwrap_or_default();
 
         if items.is_empty() {
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             continue;
         }
 

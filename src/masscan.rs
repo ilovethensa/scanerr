@@ -7,9 +7,6 @@ pub struct ScanResult {
     pub port: u16,
 }
 
-const TARGETS_FILE: &str = "/tmp/masscan_targets.txt";
-const OUTPUT_FILE: &str = "/tmp/masscan_out.json";
-
 fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
     let port_str = ports
         .iter()
@@ -17,13 +14,17 @@ fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<Scan
         .collect::<Vec<_>>()
         .join(",");
 
+    let pid = std::process::id();
+    let targets_file = format!("/tmp/masscan_targets_{}.txt", pid);
+    let output_file = format!("/tmp/masscan_out_{}.json", pid);
+
     let targets_str = targets.join("\n");
-    std::fs::write(TARGETS_FILE, &targets_str)
+    std::fs::write(&targets_file, &targets_str)
         .context("failed to write masscan targets file")?;
 
     let output = Command::new("masscan")
         .arg("-iL")
-        .arg(TARGETS_FILE)
+        .arg(&targets_file)
         .arg("-p")
         .arg(&port_str)
         .arg("--rate")
@@ -34,14 +35,14 @@ fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<Scan
         .arg("--output-format")
         .arg("json")
         .arg("--output-filename")
-        .arg(OUTPUT_FILE)
+        .arg(&output_file)
         .output()
         .context("failed to execute masscan")?;
 
-    let _ = std::fs::remove_file(TARGETS_FILE);
+    let _ = std::fs::remove_file(&targets_file);
 
-    let json = std::fs::read_to_string(OUTPUT_FILE).unwrap_or_default();
-    let _ = std::fs::remove_file(OUTPUT_FILE);
+    let json = std::fs::read_to_string(&output_file).unwrap_or_default();
+    let _ = std::fs::remove_file(&output_file);
 
     if json.trim().is_empty() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -66,6 +67,9 @@ pub fn run_stage2(ip: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>>
         .collect::<Vec<_>>()
         .join(",");
 
+    let pid = std::process::id();
+    let output_file = format!("/tmp/masscan_out_{}.json", pid);
+
     let output = Command::new("masscan")
         .arg(ip)
         .arg("-p")
@@ -78,12 +82,12 @@ pub fn run_stage2(ip: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>>
         .arg("2")
         .arg("--open")
         .arg("--output-filename")
-        .arg(OUTPUT_FILE)
+        .arg(&output_file)
         .output()
         .context("failed to execute masscan")?;
 
-    let json = std::fs::read_to_string(OUTPUT_FILE).unwrap_or_default();
-    let _ = std::fs::remove_file(OUTPUT_FILE);
+    let json = std::fs::read_to_string(&output_file).unwrap_or_default();
+    let _ = std::fs::remove_file(&output_file);
 
     if json.trim().is_empty() {
         let stderr = String::from_utf8_lossy(&output.stderr);
