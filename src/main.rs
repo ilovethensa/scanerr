@@ -364,23 +364,28 @@ async fn run_enrich(pool: PgPool, config: config::Config) -> Result<()> {
         }
 
         for (id, service_id, kind) in items {
-            info!("Enriching service {} with {}", service_id, kind);
+            let pool = pool.clone();
+            let enrich_queue = enrich_queue.clone();
+            let assets_dir = assets_dir.clone();
 
-            let enricher = match kind.as_str() {
-                "favicon" => Some(enrich::EnricherKind::Favicon),
-                "rtsp_frame" => Some(enrich::EnricherKind::RtspFrame),
-                "camera_frame" => Some(enrich::EnricherKind::CameraFrame),
-                _ => None,
-            };
+            tokio::spawn(async move {
+                info!("Enriching service {} with {}", service_id, kind);
 
-            if let Some(e) = enricher {
-                if let Err(err) = e.run(&pool, service_id, &assets_dir).await {
-                    tracing::error!("Enrichment failed for service {}: {}", service_id, err);
+                let enricher = match kind.as_str() {
+                    "favicon" => Some(enrich::EnricherKind::Favicon),
+                    "rtsp_frame" => Some(enrich::EnricherKind::RtspFrame),
+                    "camera_frame" => Some(enrich::EnricherKind::CameraFrame),
+                    _ => None,
+                };
+
+                if let Some(e) = enricher {
+                    if let Err(err) = e.run(&pool, service_id, &assets_dir).await {
+                        tracing::error!("Enrichment failed for service {}: {}", service_id, err);
+                    }
                 }
-            }
 
-            let _ = enrich_queue.heartbeat(&pool, id, now()).await;
-            let _ = enrich_queue.complete(&pool, id).await;
+                let _ = enrich_queue.complete(&pool, id).await;
+            });
         }
     }
 }
