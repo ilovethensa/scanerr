@@ -1,0 +1,19 @@
+id: roundcube
+name: Roundcube
+category: mail
+tags: [webmail, mail]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Roundcube
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Roundcube Webmail
+    weight: 7
+  - field: http.body
+    op: contains
+    value: skins/larry
+    weight: 6
