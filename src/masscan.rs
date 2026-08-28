@@ -11,7 +11,10 @@ pub struct ScanResult {
 static COUNTER: AtomicU64 = AtomicU64::new(0);
 
 fn unique_id() -> u64 {
-    COUNTER.fetch_add(1, Ordering::Relaxed)
+    // Use PID + atomic counter for globally unique IDs across containers
+    let pid = std::process::id() as u64;
+    let seq = COUNTER.fetch_add(1, Ordering::Relaxed);
+    pid.wrapping_mul(1_000_000).wrapping_add(seq)
 }
 
 fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
@@ -75,10 +78,15 @@ pub fn run_stage2(ip: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>>
         .join(",");
 
     let id = unique_id();
+    let targets_file = format!("/tmp/masscan_targets_{}.txt", id);
     let output_file = format!("/tmp/masscan_out_{}.json", id);
 
+    std::fs::write(&targets_file, ip)
+        .context("failed to write masscan targets file")?;
+
     let output = Command::new("masscan")
-        .arg(ip)
+        .arg("-iL")
+        .arg(&targets_file)
         .arg("-p")
         .arg(&port_str)
         .arg("--rate")
@@ -95,6 +103,7 @@ pub fn run_stage2(ip: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>>
 
     let json = std::fs::read_to_string(&output_file).unwrap_or_default();
     let _ = std::fs::remove_file(&output_file);
+    let _ = std::fs::remove_file(&targets_file);
 
     if json.trim().is_empty() {
         let stderr = String::from_utf8_lossy(&output.stderr);
