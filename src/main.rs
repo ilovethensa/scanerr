@@ -159,7 +159,6 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
     let ranges = scanner.ranges.clone();
     let ports = scanner.discovery_ports.clone();
     let rate = scanner.discovery_rate;
-    let rt = tokio::runtime::Handle::current();
 
     loop {
         for range in &ranges {
@@ -186,7 +185,7 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
 
             let mut inserted = 0u64;
             for result in &results {
-                if let Err(e) = rt.block_on(queue::insert_host_scan(&pool, &result.ip)) {
+                if let Err(e) = queue::insert_host_scan(&pool, &result.ip).await {
                     tracing::error!("Failed to insert host scan {}: {}", result.ip, e);
                 } else {
                     inserted += 1;
