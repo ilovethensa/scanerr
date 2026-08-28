@@ -217,36 +217,41 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
             continue;
         }
 
-        for (id, ip_str) in &items {
-            info!("Deep scanning {}", ip_str);
-            let results = masscan::run_stage2(ip_str, &ports, rate)
-                .unwrap_or_default();
-
+        for (id, ip_str) in items {
+            let pool = pool.clone();
+            let ports = ports.clone();
+            let host_queue = host_queue.clone();
             let threshold = config.scanner.honeypot_port_threshold;
-            if results.len() as u32 > threshold {
-                warn!(
-                    "Skipping {} — {} open ports exceeds honeypot threshold ({})",
-                    ip_str, results.len(), threshold
-                );
-                let _ = sqlx::query(
-                    "UPDATE hosts SET is_honeypot = true WHERE ip = $1",
-                )
-                .bind(ip_str)
-                .execute(&pool)
-                .await;
-                let _ = host_queue.complete(&pool, *id).await;
-                continue;
-            }
 
-            for result in &results {
-                if let Err(e) = queue::insert_service_probe(&pool, &result.ip, result.port as i32, "tcp").await {
-                    tracing::error!("Failed to insert service probe: {}", e);
+            tokio::spawn(async move {
+                info!("Deep scanning {}", ip_str);
+                let results = masscan::run_stage2(&ip_str, &ports, rate)
+                    .unwrap_or_default();
+
+                if results.len() as u32 > threshold {
+                    warn!(
+                        "Skipping {} — {} open ports exceeds honeypot threshold ({})",
+                        ip_str, results.len(), threshold
+                    );
+                    let _ = sqlx::query(
+                        "UPDATE hosts SET is_honeypot = true WHERE ip = $1",
+                    )
+                    .bind(&ip_str)
+                    .execute(&pool)
+                    .await;
+                    let _ = host_queue.complete(&pool, id).await;
+                    return;
                 }
-            }
-            info!("Deep scan {}: found {} open ports", ip_str, results.len());
 
-            let _ = host_queue.heartbeat(&pool, *id, now()).await;
-            let _ = host_queue.complete(&pool, *id).await;
+                for result in &results {
+                    if let Err(e) = queue::insert_service_probe(&pool, &result.ip, result.port as i32, "tcp").await {
+                        tracing::error!("Failed to insert service probe: {}", e);
+                    }
+                }
+                info!("Deep scan {}: found {} open ports", ip_str, results.len());
+
+                let _ = host_queue.complete(&pool, id).await;
+            });
         }
     }
 }
