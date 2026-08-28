@@ -1,10 +1,17 @@
 use anyhow::{Context, Result};
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Debug, Clone)]
 pub struct ScanResult {
     pub ip: String,
     pub port: u16,
+}
+
+static COUNTER: AtomicU64 = AtomicU64::new(0);
+
+fn unique_id() -> u64 {
+    COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
 fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
@@ -14,9 +21,9 @@ fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<Scan
         .collect::<Vec<_>>()
         .join(",");
 
-    let pid = std::process::id();
-    let targets_file = format!("/tmp/masscan_targets_{}.txt", pid);
-    let output_file = format!("/tmp/masscan_out_{}.json", pid);
+    let id = unique_id();
+    let targets_file = format!("/tmp/masscan_targets_{}.txt", id);
+    let output_file = format!("/tmp/masscan_out_{}.json", id);
 
     let targets_str = targets.join("\n");
     std::fs::write(&targets_file, &targets_str)
@@ -67,8 +74,8 @@ pub fn run_stage2(ip: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>>
         .collect::<Vec<_>>()
         .join(",");
 
-    let pid = std::process::id();
-    let output_file = format!("/tmp/masscan_out_{}.json", pid);
+    let id = unique_id();
+    let output_file = format!("/tmp/masscan_out_{}.json", id);
 
     let output = Command::new("masscan")
         .arg(ip)
