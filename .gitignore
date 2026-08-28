@@ -4,3 +4,6 @@ server.db
 .sqlx/
 .commandcode/
 assets/
+# MaxMind GeoIP databases
+deploy/
+*.mmdb
