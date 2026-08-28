@@ -1,6 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: scanerr
       POSTGRES_USER: scanerr
@@ -8,21 +9,30 @@ services:
     network_mode: host
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./postgres.conf:/etc/postgresql/postgresql.conf:ro
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U scanerr -h 127.0.0.1"]
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1g
 
   sweep:
     image: scanerr-app
     build: .
+    restart: unless-stopped
     command: ["sweep"]
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      SCANERR_MAX_CONN: "5"
       RUST_LOG: info
     network_mode: host
     cap_add:
@@ -30,16 +40,22 @@ services:
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
       - ./ranges.txt:/app/ranges.txt:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512m
 
   deepscan:
     image: scanerr-app
-    build: .
+    restart: unless-stopped
     command: ["deepscan"]
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      SCANERR_MAX_CONN: "5"
       RUST_LOG: info
     network_mode: host
     cap_add:
@@ -47,48 +63,74 @@ services:
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
     deploy:
-      replicas: 5
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.8'
+          memory: 512m
 
   probe:
     image: scanerr-app
+    restart: unless-stopped
     command: ["probe"]
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      SCANERR_MAX_CONN: "5"
       RUST_LOG: info
     network_mode: host
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256m
 
   enrich:
     image: scanerr-app
+    restart: unless-stopped
     command: ["enrich"]
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      SCANERR_MAX_CONN: "5"
       RUST_LOG: info
     network_mode: host
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
       - ./assets:/app/assets
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256m
 
   serve:
     image: scanerr-app
+    restart: unless-stopped
     command: ["serve"]
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       SCANERR_DB: postgres://scanerr:scanerr@localhost:5432/scanerr
+      SCANERR_MAX_CONN: "5"
       RUST_LOG: info
     network_mode: host
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
       - ./assets:/app/assets
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256m
 
 volumes:
   pgdata:

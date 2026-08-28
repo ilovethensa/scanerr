@@ -33,10 +33,22 @@ pub struct ScannerConfig {
     pub ranges_file: Option<String>,
     #[serde(default = "default_sweep_chunk_size")]
     pub sweep_chunk_size: usize,
+    #[serde(default = "default_sweep_interval_secs")]
+    pub sweep_interval_secs: u64,
+    #[serde(default = "default_honeypot_port_threshold")]
+    pub honeypot_port_threshold: u32,
 }
 
 fn default_sweep_chunk_size() -> usize {
     20
+}
+
+fn default_sweep_interval_secs() -> u64 {
+    3600
+}
+
+fn default_honeypot_port_threshold() -> u32 {
+    50
 }
 
 pub fn expand_port_ranges(specs: &[String]) -> Vec<u16> {
@@ -119,8 +131,6 @@ pub fn load(path: impl AsRef<Path>) -> Result<Config> {
                 .map(|l| l.trim().to_string())
                 .filter(|l| !l.is_empty() && !l.starts_with('#'))
                 .collect();
-        } else {
-            eprintln!("WARNING: ranges_file '{}' not found, ranges will be empty", ranges_path.display());
         }
     }
 
@@ -149,6 +159,8 @@ impl Default for Config {
                 ranges: vec!["10.0.0.0/8".into()],
                 ranges_file: None,
                 sweep_chunk_size: 20,
+                sweep_interval_secs: 3600,
+                honeypot_port_threshold: 50,
             },
             probe: ProbeConfig {
                 concurrency: 128,

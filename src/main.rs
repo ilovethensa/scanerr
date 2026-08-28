@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use sqlx::PgPool;
-use tracing::info;
+use tracing::{info, warn};
 
 use scanerr::{config, db, enrich, fingerprint, masscan, probe, queue, serve};
 
@@ -60,10 +60,6 @@ async fn main() -> Result<()> {
 
     let config = config::load("scanerr.toml").unwrap_or_else(|_| config::Config::default());
 
-    // Build fingerprint engine once, shared across all probes
-    let sig_dir = std::path::Path::new(&config.signatures.dir);
-    let engine = fingerprint::Engine::from_dir(sig_dir);
-
     // Test commands that don't need DB
     match &cli.command {
         Commands::TestScan { ip } => {
@@ -84,6 +80,8 @@ async fn main() -> Result<()> {
             let ip = parts[0];
             let port: u16 = parts[1].parse()?;
             let user_agent = config.probe.user_agent.clone();
+            let sig_dir = std::path::Path::new(&config.signatures.dir);
+            let engine = fingerprint::Engine::from_dir(sig_dir);
             let data = probe::dispatch::probe_standalone(ip, port, &user_agent, &engine).await?;
             println!("{}", serde_json::to_string_pretty(&data)?);
             return Ok(());
@@ -110,12 +108,24 @@ async fn main() -> Result<()> {
     db::run_migrations(&pool).await?;
 
     match cli.command {
-        Commands::Sweep => run_sweep(pool, config).await?,
-        Commands::Deepscan => run_deepscan(pool, config).await?,
-        Commands::Probe => run_probe(pool, config, engine).await?,
+        Commands::Sweep => {
+            scanerr::normalize::backfill(&pool).await?;
+            run_sweep(pool, config).await?
+        }
+        Commands::Deepscan => {
+            scanerr::normalize::backfill(&pool).await?;
+            run_deepscan(pool, config).await?
+        }
+        Commands::Probe => {
+            let sig_dir = std::path::Path::new(&config.signatures.dir);
+            let engine = fingerprint::Engine::from_dir(sig_dir);
+            run_probe(pool, config, engine).await?
+        }
         Commands::Enrich => run_enrich(pool, config).await?,
-        Commands::Serve => run_serve(pool, config, engine).await?,
+        Commands::Serve => run_serve(pool, config).await?,
         Commands::All => {
+            let sig_dir = std::path::Path::new(&config.signatures.dir);
+            let engine = fingerprint::Engine::from_dir(sig_dir);
             let config1 = config.clone();
             let config2 = config.clone();
             let config3 = config.clone();
@@ -125,12 +135,11 @@ async fn main() -> Result<()> {
             let pool4 = pool.clone();
             let pool5 = pool.clone();
             let engine2 = engine.clone();
-            let engine3 = engine.clone();
             let h1 = tokio::spawn(run_sweep(pool, config));
             let h2 = tokio::spawn(run_deepscan(pool2, config1));
             let h3 = tokio::spawn(run_probe(pool3, config2, engine2));
             let h4 = tokio::spawn(run_enrich(pool4, config3));
-            let h5 = tokio::spawn(run_serve(pool5, config4, engine3));
+            let h5 = tokio::spawn(run_serve(pool5, config4));
             h1.await??;
             h2.await??;
             h3.await??;
@@ -151,36 +160,39 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
     let ports = scanner.discovery_ports.clone();
     let rate = scanner.discovery_rate;
     let chunk_size = scanner.sweep_chunk_size;
+    let interval = scanner.sweep_interval_secs;
 
-    for chunk in ranges.chunks(chunk_size) {
-        // Wait while backpressured — retry the same chunk, never skip it
-        loop {
-            match queue::backpressure_active(&pool, scanner.max_probe_queue_depth).await {
-                Ok(true) => {
-                    info!("Backpressure active — probe queue full, pausing sweep");
-                    tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+    loop {
+        for chunk in ranges.chunks(chunk_size) {
+            // Wait while backpressured — retry the same chunk, never skip it
+            loop {
+                match queue::backpressure_active(&pool, scanner.max_probe_queue_depth).await {
+                    Ok(true) => {
+                        info!("Backpressure active — probe queue full, pausing sweep");
+                        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+                    }
+                    _ => break,
                 }
-                _ => break,
             }
+
+            info!("Sweeping {} ranges", chunk.len());
+            let results = masscan::run_stage1_batch(chunk, &ports, rate)
+                .unwrap_or_default();
+
+            let mut inserted = 0u64;
+            for result in &results {
+                if let Err(e) = queue::insert_host_scan(&pool, &result.ip).await {
+                    tracing::error!("Failed to insert host scan {}: {}", result.ip, e);
+                } else {
+                    inserted += 1;
+                }
+            }
+            info!("Sweep chunk: found {} alive hosts, inserted {} into queue", results.len(), inserted);
         }
 
-        info!("Sweeping {} ranges", chunk.len());
-        let results = masscan::run_stage1_batch(chunk, &ports, rate)
-            .unwrap_or_default();
-
-        let mut inserted = 0u64;
-        for result in &results {
-            if let Err(e) = queue::insert_host_scan(&pool, &result.ip).await {
-                tracing::error!("Failed to insert host scan {}: {}", result.ip, e);
-            } else {
-                inserted += 1;
-            }
-        }
-        info!("Sweep chunk: found {} alive hosts, inserted {} into queue", results.len(), inserted);
+        info!("Sweep finished — all ranges scanned. Re-scanning in {}s", interval);
+        tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
     }
-
-    info!("Sweep finished — all ranges scanned");
-    Ok(())
 }
 
 async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
@@ -213,6 +225,22 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
             let results = masscan::run_stage2(ip_str, &ports, rate)
                 .unwrap_or_default();
 
+            let threshold = config.scanner.honeypot_port_threshold;
+            if results.len() as u32 > threshold {
+                warn!(
+                    "Skipping {} — {} open ports exceeds honeypot threshold ({})",
+                    ip_str, results.len(), threshold
+                );
+                let _ = sqlx::query(
+                    "UPDATE hosts SET is_honeypot = true WHERE ip = $1",
+                )
+                .bind(ip_str)
+                .execute(&pool)
+                .await;
+                let _ = host_queue.complete(&pool, *id).await;
+                continue;
+            }
+
             for result in &results {
                 if let Err(e) = queue::insert_service_probe(&pool, &result.ip, result.port as i32, "tcp").await {
                     tracing::error!("Failed to insert service probe: {}", e);
@@ -221,6 +249,7 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
             info!("Deep scan {}: found {} open ports", ip_str, results.len());
 
             let _ = host_queue.heartbeat(&pool, *id, now()).await;
+            let _ = host_queue.complete(&pool, *id).await;
         }
     }
 }
@@ -329,11 +358,12 @@ async fn run_enrich(pool: PgPool, config: config::Config) -> Result<()> {
             }
 
             let _ = enrich_queue.heartbeat(&pool, id, now()).await;
+            let _ = enrich_queue.complete(&pool, id).await;
         }
     }
 }
 
-async fn run_serve(pool: PgPool, config: config::Config, _engine: fingerprint::Engine) -> Result<()> {
+async fn run_serve(pool: PgPool, config: config::Config) -> Result<()> {
     info!("Starting web server on {}", config.webui.bind);
 
     let tera = tera::Tera::new(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"))

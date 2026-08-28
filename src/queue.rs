@@ -22,7 +22,7 @@ impl LeasedQueue {
               UPDATE queue_host_scans SET claimed_until = $1
               WHERE id IN (
                 SELECT id FROM queue_host_scans
-                WHERE claimed_until IS NULL OR claimed_until < $2
+                WHERE COALESCE(claimed_until, 0) < $2
                 ORDER BY id LIMIT $3
                 FOR UPDATE SKIP LOCKED
               ) RETURNING id, ip::text
@@ -50,7 +50,7 @@ impl LeasedQueue {
               UPDATE queue_service_probes SET claimed_until = $1
               WHERE id IN (
                 SELECT id FROM queue_service_probes
-                WHERE claimed_until IS NULL OR claimed_until < $2
+                WHERE COALESCE(claimed_until, 0) < $2
                 ORDER BY id LIMIT $3
                 FOR UPDATE SKIP LOCKED
               ) RETURNING id, ip::text, port, transport
@@ -78,7 +78,7 @@ impl LeasedQueue {
               UPDATE queue_enrichments SET claimed_until = $1
               WHERE id IN (
                 SELECT id FROM queue_enrichments
-                WHERE claimed_until IS NULL OR claimed_until < $2
+                WHERE COALESCE(claimed_until, 0) < $2
                 ORDER BY id LIMIT $3
                 FOR UPDATE SKIP LOCKED
               ) RETURNING id, service_id, kind

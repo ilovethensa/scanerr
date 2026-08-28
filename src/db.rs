@@ -2,8 +2,12 @@ use anyhow::Result;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 
 pub async fn connect(url: &str) -> Result<PgPool> {
+    let max_conn: u32 = std::env::var("SCANERR_MAX_CONN")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(5);
     let pool = PgPoolOptions::new()
-        .max_connections(20)
+        .max_connections(max_conn)
         .connect(url)
         .await?;
     Ok(pool)

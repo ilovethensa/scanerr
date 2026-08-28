@@ -3,6 +3,7 @@ use sqlx::PgPool;
 
 use crate::fingerprint::Engine;
 use crate::models::ServiceData;
+use crate::normalize::normalize_service;
 use super::{engine, geoip, rndns};
 
 #[derive(Debug)]
@@ -36,6 +37,7 @@ pub async fn probe(
     data.port = Some(port);
 
     engine.identify(&mut data);
+    normalize_service(&mut data);
 
     // Only create/update the host after a successful probe
     let host_id = ensure_host(pool, clean_ip).await?;
@@ -85,6 +87,7 @@ pub async fn probe_standalone(
     let mut data = registry.dispatch(clean_ip, port, user_agent).await?;
     data.port = Some(port);
     engine.identify(&mut data);
+    normalize_service(&mut data);
     Ok(data)
 }
 
@@ -110,7 +113,6 @@ fn now() -> i64 {
 }
 
 pub async fn upsert_service(pool: &PgPool, result: &ProbeResult) -> Result<i64> {
-    // Don't store firewalled services
     if result.data.kind == "firewalled" {
         anyhow::bail!("firewalled — skipping storage");
     }
@@ -119,26 +121,11 @@ pub async fn upsert_service(pool: &PgPool, result: &ProbeResult) -> Result<i64> 
     let data_json = sanitize_json_nulls(serde_json::to_value(&result.data)?);
 
     let row: (i64,) = sqlx::query_as(
-        "WITH existing AS (
-            SELECT id FROM services
-            WHERE host_id = $1 AND port = $2 AND transport = $3
-            AND (sni = $4 OR (sni IS NULL AND $4 IS NULL))
-            LIMIT 1
-         ),
-         upd AS (
-            UPDATE services SET data = $5, last_seen = $6
-            WHERE id = (SELECT id FROM existing)
-            RETURNING id
-         ),
-         ins AS (
-            INSERT INTO services (host_id, port, transport, sni, data, first_seen, last_seen)
-            SELECT $1, $2, $3, $4, $5, $6, $6
-            WHERE NOT EXISTS (SELECT 1 FROM existing)
-            RETURNING id
-         )
-         SELECT id FROM upd
-         UNION ALL
-         SELECT id FROM ins",
+        "INSERT INTO services (host_id, port, transport, sni, data, first_seen, last_seen)
+         VALUES ($1, $2, $3, $4, $5, $6, $6)
+         ON CONFLICT (host_id, port, transport, COALESCE(sni, ''))
+         DO UPDATE SET data = EXCLUDED.data, last_seen = EXCLUDED.last_seen
+         RETURNING id",
     )
     .bind(result.host_id)
     .bind(result.port as i32)
@@ -149,7 +136,7 @@ pub async fn upsert_service(pool: &PgPool, result: &ProbeResult) -> Result<i64> 
     .fetch_one(pool)
     .await?;
 
-    // Check if this host now has >50 services → mark as honeypot
+    // Honeypot check — guarded by is_honeypot=false, runs once per honeypot
     sqlx::query(
         "UPDATE hosts SET is_honeypot = true
          WHERE id = $1 AND is_honeypot = false
