@@ -160,7 +160,6 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
     let ports = scanner.discovery_ports.clone();
     let rate = scanner.discovery_rate;
     let chunk_size = scanner.sweep_chunk_size;
-    let interval = scanner.sweep_interval_secs;
 
     loop {
         for chunk in ranges.chunks(chunk_size) {
@@ -190,8 +189,7 @@ async fn run_sweep(pool: PgPool, config: config::Config) -> Result<()> {
             info!("Sweep chunk: found {} alive hosts, inserted {} into queue", results.len(), inserted);
         }
 
-        info!("Sweep finished — all ranges scanned. Re-scanning in {}s", interval);
-        tokio::time::sleep(std::time::Duration::from_secs(interval)).await;
+        info!("Sweep finished — re-scanning all ranges");
     }
 }
 
