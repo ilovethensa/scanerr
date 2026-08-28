@@ -8,7 +8,7 @@ matchers:
   - field: http.header.www-authenticate
     op: contains
     value: TP-LINK
-    weight: 25
+    weight: 10
   - field: http.body
     op: contains
     value: tplinklogin.net
@@ -23,17 +23,17 @@ matchers:
     weight: 8
   - field: http.body
     op: contains
-    value: AX80v1
-    weight: 2
+    value: $.su.CHAR
+    weight: 8
   - field: http.body
     op: contains
-    value: $.su.language
-    weight: 2
+    value: tp-link.com/support
+    weight: 7
   - field: http.body
     op: contains
-    value: tpEncrypt
-    weight: 2
-  - field: http.header.server
+    value: tp-link-tether
+    weight: 6
+  - field: ssl.subject_cn
     op: equals
-    value: Router Webserver
-    weight: 2
+    value: tplinkwifi.net
+    weight: 9

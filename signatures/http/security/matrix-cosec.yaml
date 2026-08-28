@@ -1,0 +1,19 @@
+id: matrix-cosec
+name: Matrix Cosec Panel
+category: security
+tags: [access-control, physical-security]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Cosec Panel
+    weight: 10
+  - field: http.body
+    op: contains
+    value: MATRIX
+    weight: 6
+  - field: http.header.server
+    op: equals
+    value: GoAhead-http
+    weight: 4

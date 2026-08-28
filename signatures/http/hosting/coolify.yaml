@@ -1,0 +1,15 @@
+id: coolify
+name: Coolify
+category: hosting
+tags: [paas, self-hosted, deployment]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Coolify
+    weight: 10
+  - field: http.body
+    op: contains
+    value: themeAccentForeground
+    weight: 8

@@ -1,0 +1,15 @@
+id: traefik
+name: Traefik
+category: reverse-proxy
+tags: [reverse-proxy, load-balancer]
+priority: 80
+condition: any
+matchers:
+  - field: ssl.subject_cn
+    op: contains
+    value: TRAEFIK DEFAULT CERT
+    weight: 10
+  - field: http.body
+    op: equals
+    value: "404 page not found\n"
+    weight: 5

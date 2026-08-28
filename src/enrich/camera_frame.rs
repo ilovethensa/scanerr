@@ -122,7 +122,10 @@ pub async fn capture_standalone(target: &str) -> Result<FrameResult> {
     };
 
     if base_url.starts_with("rtsp") {
-        let result = capture_from_rtsp_url(&base_url).await?;
+        // Extract host from rtsp://host:port/path
+        let without_proto = base_url.trim_start_matches("rtsp://");
+        let host = without_proto.split(':').next().unwrap_or("").split('/').next().unwrap_or("");
+        let result = capture_from_rtsp(host, 554).await?;
         let mut hasher = Sha256::new();
         hasher.update(&result.bytes);
         let sha256 = format!("{:x}", hasher.finalize());
@@ -247,41 +250,6 @@ async fn capture_from_rtsp(ip: &str, port: u16) -> Result<SnapshotResult> {
     }
 
     anyhow::bail!("no RTSP frame captured from {}:{}", ip, port)
-}
-
-async fn capture_from_rtsp_url(url: &str) -> Result<SnapshotResult> {
-    let tmp_path = "/tmp/rtsp_camera_frame.jpg";
-
-    let output = Command::new("ffmpeg")
-        .args([
-            "-rtsp_transport", "tcp",
-            "-i", url,
-            "-frames:v", "1",
-            "-y",
-            tmp_path,
-        ])
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .output()
-        .await;
-
-    match output {
-        Ok(o) if o.status.success() => {
-            let bytes = std::fs::read(tmp_path)?;
-            if bytes.len() > 500 {
-                let _ = std::fs::remove_file(tmp_path);
-                return Ok(SnapshotResult {
-                    bytes,
-                    path: url.to_string(),
-                });
-            }
-        }
-        _ => {
-            let _ = std::fs::remove_file(tmp_path);
-        }
-    }
-
-    anyhow::bail!("no RTSP frame captured from {}", url)
 }
 
 struct SnapshotResult {

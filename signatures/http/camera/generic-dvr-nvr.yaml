@@ -25,3 +25,11 @@ matchers:
     op: contains
     value: VideoPlayTool://
     weight: 7
+  - field: http.body
+    op: contains
+    value: rpcCore.js
+    weight: 6
+  - field: http.body
+    op: contains
+    value: rpcLogin.js
+    weight: 5

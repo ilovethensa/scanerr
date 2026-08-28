@@ -1,0 +1,15 @@
+id: alphapd-dvr
+name: AlphaPD DVR/NVR
+category: camera
+tags: [camera, surveillance, iot, dvr]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: alphapd
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Internet Explorer
+    weight: 3

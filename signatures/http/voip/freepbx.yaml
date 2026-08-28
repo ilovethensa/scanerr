@@ -1,0 +1,15 @@
+id: freepbx
+name: FreePBX
+category: voip
+tags: [voip, pbx, asterisk]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: FreePBX
+    weight: 10
+  - field: http.body
+    op: contains
+    value: FreePBX
+    weight: 6

@@ -64,8 +64,8 @@ impl ProtocolProbe for BgpProbe {
             if msg_type == 1 || msg_type == 3 {
                 let mut data = ServiceData::default();
                 data.kind = "bgp".into();
-                data.product = Some("BGP".into());
-                data.tags = vec!["bgp".into(), "routing".into()];
+                data.product = Some("bgp".into());
+                data.tags = vec!["networking".into()];
                 data.banner = Some(format!("BGP type={}", msg_type));
                 return Ok(data);
             }

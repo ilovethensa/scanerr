@@ -41,6 +41,8 @@ fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<Scan
         .arg(rate.to_string())
         .arg("--retries")
         .arg("2")
+        .arg("--wait")
+        .arg("1")
         .arg("--open")
         .arg("--output-format")
         .arg("json")
@@ -55,8 +57,13 @@ fn masscan_scan(targets: &[String], ports: &[u16], rate: u32) -> Result<Vec<Scan
     let _ = std::fs::remove_file(&output_file);
 
     if json.trim().is_empty() {
+        // Masscan produced no output — either no open ports found or scan failed
+        // Check if the process succeeded (exit 0) vs failed
+        if output.status.success() {
+            return Ok(vec![]); // No open ports found — valid result
+        }
         let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("masscan produced no output: {}", stderr);
+        anyhow::bail!("masscan failed: {}", stderr);
     }
 
     parse_masscan_json(&json)
@@ -71,46 +78,8 @@ pub fn run_stage1_batch(ranges: &[String], ports: &[u16], rate: u32) -> Result<V
 }
 
 pub fn run_stage2(ip: &str, ports: &[u16], rate: u32) -> Result<Vec<ScanResult>> {
-    let port_str = ports
-        .iter()
-        .map(|p| p.to_string())
-        .collect::<Vec<_>>()
-        .join(",");
-
-    let id = unique_id();
-    let targets_file = format!("/tmp/masscan_targets_{}.txt", id);
-    let output_file = format!("/tmp/masscan_out_{}.json", id);
-
-    std::fs::write(&targets_file, ip)
-        .context("failed to write masscan targets file")?;
-
-    let output = Command::new("masscan")
-        .arg("-iL")
-        .arg(&targets_file)
-        .arg("-p")
-        .arg(&port_str)
-        .arg("--rate")
-        .arg(rate.to_string())
-        .arg("--output-format")
-        .arg("json")
-        .arg("--retries")
-        .arg("2")
-        .arg("--open")
-        .arg("--output-filename")
-        .arg(&output_file)
-        .output()
-        .context("failed to execute masscan")?;
-
-    let json = std::fs::read_to_string(&output_file).unwrap_or_default();
-    let _ = std::fs::remove_file(&output_file);
-    let _ = std::fs::remove_file(&targets_file);
-
-    if json.trim().is_empty() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("masscan produced no output: {}", stderr);
-    }
-
-    parse_masscan_json(&json)
+    // Deep scan is just a stage-1 style scan with a single /32 target.
+    masscan_scan(&[ip.to_string()], ports, rate)
 }
 
 pub fn parse_masscan_json(json: &str) -> Result<Vec<ScanResult>> {

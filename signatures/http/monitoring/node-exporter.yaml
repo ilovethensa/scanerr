@@ -1,0 +1,15 @@
+id: node-exporter
+name: Prometheus Node Exporter
+category: monitoring
+tags: [monitoring, metrics, prometheus]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Node Exporter
+    weight: 10
+  - field: http.body
+    op: contains
+    value: "# HELP node_"
+    weight: 7

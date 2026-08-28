@@ -43,7 +43,7 @@ impl ProtocolProbe for Pop3Probe {
         let mut data = ServiceData::default();
         data.kind = "pop3".into();
         data.banner = Some(banner_text.clone());
-        data.tags = vec!["pop3".into(), "mail".into()];
+        data.tags = vec!["mail".into()];
         data.pop3 = Some(Pop3Data {
             banner: Some(banner_text.clone()),
             server: Some(banner_text),

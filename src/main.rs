@@ -1,6 +1,8 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use sqlx::PgPool;
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 use tracing::{info, warn};
 
 use scanerr::{config, db, enrich, fingerprint, masscan, probe, queue, serve};
@@ -205,6 +207,15 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
     let ports = config.scanner.expanded_deep_ports();
     let rate = config.scanner.deep_scan_rate;
 
+    // Bound the number of concurrent masscan subprocesses per replica. Without this, the
+    // claim loop spawns an unbounded number of masscan processes (spawn_blocking is not
+    // awaited), which OOM-kills the cgroup (see .agents/deepscan-analysis.md). 2 permits ×
+    // 4 replicas = 8 concurrent masscan max — stays well under the 512MB limit.
+    let max_concurrent: usize = 2;
+    let max_attempts: i32 = 3;
+    let sem = Arc::new(Semaphore::new(max_concurrent));
+    let mut sweep_tick: u32 = 0;
+
     let now = || {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -224,40 +235,61 @@ async fn run_deepscan(pool: PgPool, config: config::Config) -> Result<()> {
         }
 
         for (id, ip_str) in items {
+            // Count the attempt so poison hosts are dropped after max_attempts (sweep requeues
+            // hosts whose lease expired without completing, e.g. after an OOM kill).
+            let _ = host_queue.increment_attempts(&pool, id).await;
+
+            // Bound concurrent masscan subprocesses: block the claim loop until a permit is free
+            // so we never launch more than `max_concurrent` masscan at once per replica.
+            let permit = match sem.clone().acquire_owned().await {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
+
             let pool = pool.clone();
             let ports = ports.clone();
             let host_queue = host_queue.clone();
             let threshold = config.scanner.honeypot_port_threshold;
             let rt = tokio::runtime::Handle::current();
 
-            tokio::task::spawn_blocking(move || {
-                info!("Deep scanning {}", ip_str);
-                let results = masscan::run_stage2(&ip_str, &ports, rate)
-                    .unwrap_or_default();
+            tokio::spawn(async move {
+                let _permit = permit; // released when this task ends → frees a slot
+                let _ = tokio::task::spawn_blocking(move || {
+                    info!("Deep scanning {}", ip_str);
+                    let results = masscan::run_stage2(&ip_str, &ports, rate)
+                        .unwrap_or_default();
 
-                if results.len() as u32 > threshold {
-                    warn!(
-                        "Skipping {} — {} open ports exceeds honeypot threshold ({})",
-                        ip_str, results.len(), threshold
-                    );
-                    let _ = rt.block_on(sqlx::query(
-                        "UPDATE hosts SET is_honeypot = true WHERE ip = $1",
-                    )
-                    .bind(&ip_str)
-                    .execute(&pool));
-                    let _ = rt.block_on(host_queue.complete(&pool, id));
-                    return;
-                }
-
-                for result in &results {
-                    if let Err(e) = rt.block_on(queue::insert_service_probe(&pool, &result.ip, result.port as i32, "tcp")) {
-                        tracing::error!("Failed to insert service probe: {}", e);
+                    if results.len() as u32 > threshold {
+                        warn!(
+                            "Skipping {} — {} open ports exceeds honeypot threshold ({})",
+                            ip_str, results.len(), threshold
+                        );
+                        let _ = rt.block_on(sqlx::query(
+                            "UPDATE hosts SET is_honeypot = true WHERE ip = $1",
+                        )
+                        .bind(&ip_str)
+                        .execute(&pool));
+                        let _ = rt.block_on(host_queue.complete(&pool, id));
+                        return;
                     }
-                }
-                info!("Deep scan {}: found {} open ports", ip_str, results.len());
 
-                let _ = rt.block_on(host_queue.complete(&pool, id));
+                    for result in &results {
+                        if let Err(e) = rt.block_on(queue::insert_service_probe(&pool, &result.ip, result.port as i32, "tcp")) {
+                            tracing::error!("Failed to insert service probe: {}", e);
+                        }
+                    }
+                    info!("Deep scan {}: found {} open ports", ip_str, results.len());
+
+                    let _ = rt.block_on(host_queue.complete(&pool, id));
+                }).await;
             });
+        }
+
+        sweep_tick = sweep_tick.wrapping_add(1);
+        if sweep_tick % 50 == 0 {
+            // Requeue host scans whose lease expired without completing (e.g. OOM-killed),
+            // and drop ones that exceeded max_attempts.
+            let _ = host_queue.sweep(&pool, max_attempts, t).await;
         }
     }
 }
@@ -268,7 +300,10 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
     let user_agent = config.probe.user_agent.clone();
     let geoip_db = config.probe.geoip_db_path.clone();
     let asn_db = config.probe.asn_db_path.clone();
-    let probe_timeout = std::time::Duration::from_secs(config.probe.timeout_secs);
+    // Outer safety cap for a single probe. Internal phase timeouts already bound each step
+    // (read_banner 2s+2s, HTTP/HTTPS/TLS fallback 5s each), so the old 5s cap killed probes
+    // mid-fallback and dropped ~95% of open ports. Keep at least 20s. See .agents/probe-analysis.md.
+    let probe_timeout = std::time::Duration::from_secs(config.probe.timeout_secs.max(20));
 
     let now = || {
         std::time::SystemTime::now()

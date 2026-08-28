@@ -103,7 +103,7 @@ pub struct ServiceData {
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub confidence: Option<u8>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub banner: Option<String>,
@@ -155,11 +155,11 @@ pub struct HttpData {
     pub robots: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub securitytxt: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub tags: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub waf: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub redirects: Vec<String>,
 }
 
@@ -213,7 +213,7 @@ pub struct MqttData {
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub return_code: Option<u8>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub subscriptions: Vec<String>,
 }
 

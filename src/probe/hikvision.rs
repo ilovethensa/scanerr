@@ -43,9 +43,9 @@ impl ProtocolProbe for HikvisionProbe {
 
         if response.contains("Hikvision") || response.contains("deviceInfo") || response.contains("DS-") {
             let mut data = ServiceData::default();
-            data.kind = "camera".into();
-            data.product = Some("Hikvision".into());
-            data.tags = vec!["camera".into(), "surveillance".into(), "iot".into(), "hikvision".into()];
+            data.kind = "http".into();
+            data.product = Some("hikvision".into());
+            data.tags = vec!["camera".into(), "surveillance".into(), "iot".into()];
             data.banner = Some(response.lines().next().unwrap_or("").to_string());
 
             if let Some(start) = response.find("model:") {

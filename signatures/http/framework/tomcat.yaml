@@ -1,0 +1,19 @@
+id: tomcat
+name: Apache Tomcat
+category: framework
+tags: [java, framework, servlet]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: startswith
+    value: Apache Tomcat
+    weight: 10
+  - field: http.body
+    op: contains
+    value: tomcat.css
+    weight: 7
+  - field: http.body
+    op: contains
+    value: Apache Software Foundation
+    weight: 5

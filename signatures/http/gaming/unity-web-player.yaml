@@ -1,0 +1,19 @@
+id: unity-web-player
+name: Unity Web Player
+category: gaming
+tags: [gaming, unity]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: startswith
+    value: "Unity Web Player"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: unity-container
+    weight: 7
+  - field: http.body
+    op: contains
+    value: TemplateData/style.css
+    weight: 6

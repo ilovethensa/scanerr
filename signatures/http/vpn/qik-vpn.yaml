@@ -1,0 +1,15 @@
+id: qik-vpn
+name: QIK VPN
+category: vpn
+tags: [vpn, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: "QIK VPN Personal Server"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: t.me/qikrobot
+    weight: 8

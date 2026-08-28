@@ -57,7 +57,7 @@ impl ProtocolProbe for TelnetProbe {
         let mut data = ServiceData::default();
         data.kind = "telnet".into();
         data.banner = Some(text);
-        data.tags = vec!["telnet".into()];
+        data.tags = vec!["remote-access".into()];
 
         Ok(data)
     }

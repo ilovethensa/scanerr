@@ -1,0 +1,19 @@
+id: zabbix
+name: Zabbix
+category: monitoring
+tags: [monitoring, alerting]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Zabbix
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Zabbix SIA
+    weight: 8
+  - field: http.body
+    op: contains
+    value: apple-touch-icon-76x76-precomposed.png
+    weight: 5

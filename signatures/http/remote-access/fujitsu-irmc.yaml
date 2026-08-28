@@ -1,0 +1,19 @@
+id: fujitsu-irmc
+name: Fujitsu iRMC
+category: remote-access
+tags: [bmc, server-management, remote-access]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: iRMC
+    weight: 10
+  - field: http.title
+    op: contains
+    value: iRMC
+    weight: 8
+  - field: http.title
+    op: contains
+    value: ServerView
+    weight: 7

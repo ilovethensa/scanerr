@@ -1,0 +1,15 @@
+id: domainer
+name: Domainer
+category: hosting
+tags: [hosting, domain-management]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: "Domainer Login Page"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: domainer-xl.png
+    weight: 8

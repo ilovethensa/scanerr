@@ -107,13 +107,20 @@ fn parse_ssh_version(version: &str) -> (Option<String>, Option<String>) {
     let product_version = parts[0];
 
     // Split product from version: "OpenSSH_9.2p1" -> ("OpenSSH", "9.2p1")
-    if let Some(pos) = product_version.find('_') {
-        let product = product_version[..pos].to_string();
-        let version = product_version[pos + 1..].to_string();
-        (Some(product), Some(version))
+    let (prod, ver) = if let Some(pos) = product_version.find('_') {
+        (product_version[..pos].to_string(), Some(product_version[pos + 1..].to_string()))
     } else {
-        (Some(product_version.to_string()), None)
-    }
+        (product_version.to_string(), None)
+    };
+
+    // Strip to printable ASCII — prevents binary banner leaks
+    let clean_prod: String = prod.chars().filter(|c| c.is_ascii_graphic() || *c == ' ').collect();
+    let clean_ver = ver.map(|v| v.chars().filter(|c| c.is_ascii_graphic() || *c == ' ').collect::<String>());
+
+    let clean_prod = if clean_prod.is_empty() { None } else { Some(clean_prod) };
+    let clean_ver = clean_ver.and_then(|v| if v.is_empty() { None } else { Some(v) });
+
+    (clean_prod, clean_ver)
 }
 
 fn build_kexinit() -> Vec<u8> {

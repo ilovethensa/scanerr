@@ -1,0 +1,19 @@
+id: dlink-router
+name: D-Link Router
+category: networking
+tags: [router, networking, iot]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: AppMobileCtrl
+    weight: 8
+  - field: http.body
+    op: contains
+    value: nw-empty-page-state-image-error
+    weight: 10
+  - field: http.body
+    op: contains
+    value: /admin/templates/body.tpl.html
+    weight: 7

@@ -11,9 +11,5 @@ matchers:
     weight: 10
   - field: http.body
     op: contains
-    value: schema.org/Product
-    weight: 4
-  - field: http.body
-    op: contains
-    value: theme-color
-    weight: 2
+    value: Jitsi Meet
+    weight: 6

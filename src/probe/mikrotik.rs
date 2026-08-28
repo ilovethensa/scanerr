@@ -18,8 +18,8 @@ impl ProtocolProbe for MikrotikProbe {
     async fn probe(&self, _ip: &str, _port: u16, banner: &[u8], _ua: &str) -> Result<ServiceData> {
         let mut data = ServiceData::default();
         data.kind = "mikrotik".into();
-        data.product = Some("MikroTik".into());
-        data.tags = vec!["mikrotik".into(), "routeros".into(), "btest".into()];
+        data.product = Some("mikrotik".into());
+        data.tags = vec!["networking".into()];
         data.banner = Some("MikroTik bandwidth-test server".into());
 
         // The4-byte hello is sufficient for identification — no further

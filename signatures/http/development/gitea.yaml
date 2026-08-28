@@ -1,0 +1,19 @@
+id: gitea
+name: Gitea
+category: development
+tags: [git, self-hosted, code]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Gitea
+    weight: 10
+  - field: http.body
+    op: contains
+    value: data-theme="gitea-dark"
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Git with a cup of tea
+    weight: 7

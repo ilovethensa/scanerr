@@ -1,0 +1,19 @@
+id: zimbra
+name: Zimbra
+category: mail
+tags: [webmail, mail, collaboration]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Zimbra
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Zimbra Collaboration Suite
+    weight: 8
+  - field: http.body
+    op: contains
+    value: user_font_size_normal
+    weight: 6

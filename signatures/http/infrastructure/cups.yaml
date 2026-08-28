@@ -1,0 +1,19 @@
+id: cups
+name: CUPS
+category: infrastructure
+tags: [printing, infrastructure]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: CUPS
+    weight: 10
+  - field: http.title
+    op: contains
+    value: CUPS
+    weight: 8
+  - field: http.body
+    op: contains
+    value: /cups.css
+    weight: 6

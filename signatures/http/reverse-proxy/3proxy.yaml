@@ -1,0 +1,15 @@
+id: 3proxy
+name: 3proxy
+category: proxy
+tags: [proxy, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: "3proxy"
+    weight: 10
+  - field: http.body
+    op: contains
+    value: tiny proxy server
+    weight: 8

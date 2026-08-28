@@ -1,0 +1,11 @@
+id: tgcombine
+name: TGcombine
+category: messaging
+tags: [telegram, automation]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: TGcombine UI
+    weight: 10

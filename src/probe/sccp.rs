@@ -139,7 +139,7 @@ pub async fn probe_sccp(ip: &str, port: u16) -> Result<ServiceData> {
 
     let mut data = ServiceData::default();
     data.kind = "sccp".into();
-    data.tags = vec!["sccp".into(), "cisco".into(), "voip".into()];
+    data.tags = vec!["voip".into()];
 
     // ── Parse RegisterAck (msg_id 0x0081) ──────────────────────────────────
     if msg_id == MSG_REGISTER_ACK && n >= 16 {
@@ -299,7 +299,6 @@ fn enrich_from_extra(data: &mut ServiceData, extra: &[u8]) {
             if let Some(ref mut sccp) = data.sccp {
                 sccp.device_type = Some(device_type);
             }
-            data.tags.push(format!("device:{}", device_type));
         }
     }
 
@@ -323,9 +322,8 @@ fn enrich_from_extra(data: &mut ServiceData, extra: &[u8]) {
             .to_string();
         if !fw.is_empty() {
             if let Some(ref mut sccp) = data.sccp {
-                sccp.firmware = Some(fw.clone());
+                sccp.firmware = Some(fw);
             }
-            data.tags.push(format!("firmware:{}", fw));
         }
     }
 }

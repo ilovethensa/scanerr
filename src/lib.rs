@@ -5,6 +5,7 @@ pub mod evidence;
 pub mod fingerprint;
 pub mod masscan;
 pub mod models;
+pub mod normalize;
 pub mod probe;
 pub mod query;
 pub mod queue;

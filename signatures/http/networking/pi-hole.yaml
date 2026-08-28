@@ -1,0 +1,19 @@
+id: pi-hole
+name: Pi-hole
+category: networking
+tags: [dns, adblock, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: Pi-hole logo
+    weight: 10
+  - field: http.body
+    op: contains
+    value: /admin/img/logo.svg
+    weight: 7
+  - field: http.header.server
+    op: startswith
+    value: lighttpd
+    weight: 3

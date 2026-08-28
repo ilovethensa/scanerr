@@ -95,11 +95,10 @@ async fn probe_rtsp(ip: &str, port: u16) -> Result<ServiceData> {
 
     let mut data = ServiceData::default();
     data.kind = "rtsp".into();
-    data.tags = vec!["rtsp".into()];
+    data.tags = vec!["camera".into()];
 
     if let Some(ref s) = server {
         data.product = Some(s.clone());
-        data.tags.push(s.to_lowercase());
     }
 
     data.banner = Some(format!("RTSP/1.0 {}", status_code));

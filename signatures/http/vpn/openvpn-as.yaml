@@ -1,0 +1,15 @@
+id: openvpn-as
+name: OpenVPN Access Server
+category: vpn
+tags: [vpn, remote-access]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: equals
+    value: OpenVPN-AS
+    weight: 10
+  - field: http.title
+    op: contains
+    value: Cookie support required
+    weight: 6

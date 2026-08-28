@@ -1,0 +1,19 @@
+id: taiga
+name: Taiga
+category: webapp
+tags: [project-management, agile, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Taiga
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Taiga is a project management platform
+    weight: 8
+  - field: http.body
+    op: contains
+    value: ng-attr-dir
+    weight: 4

@@ -1,0 +1,19 @@
+id: edoms
+name: Edoms
+category: security
+tags: [sso, authentication]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Edoms
+    weight: 10
+  - field: http.body
+    op: contains
+    value: sso_assets
+    weight: 7
+  - field: http.body
+    op: contains
+    value: Login with Edoms
+    weight: 8

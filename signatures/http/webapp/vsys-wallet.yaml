@@ -1,0 +1,19 @@
+id: vsys-wallet
+name: VSYS Wallet
+category: webapp
+tags: [blockchain, wallet, crypto]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: VSYS Wallet
+    weight: 10
+  - field: http.body
+    op: contains
+    value: shk-logo
+    weight: 7
+  - field: http.header.server
+    op: equals
+    value: gunicorn
+    weight: 3

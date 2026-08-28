@@ -1,0 +1,19 @@
+id: open-webui
+name: Open WebUI
+category: webapp
+tags: [ai, llm, chat, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Open WebUI
+    weight: 10
+  - field: http.body
+    op: contains
+    value: /static/favicon.svg
+    weight: 5
+  - field: http.body
+    op: contains
+    value: crossorigin="use-credentials"
+    weight: 3

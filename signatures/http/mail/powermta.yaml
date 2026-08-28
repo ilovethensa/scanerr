@@ -1,0 +1,19 @@
+id: powermta
+name: PowerMTA
+category: mail
+tags: [email, delivery, infrastructure]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: /etc/pmta/config
+    weight: 10
+  - field: http.body
+    op: contains
+    value: PMTA User Guide
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Web Monitor
+    weight: 5

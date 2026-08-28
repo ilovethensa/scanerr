@@ -1,0 +1,19 @@
+id: edgeos
+name: Ubiquiti EdgeOS
+category: networking
+tags: [router, networking, ubiquiti]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: EdgeOS
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Ubiquiti Networks
+    weight: 7
+  - field: ssl.subject_cn
+    op: equals
+    value: UbiquitiRouterUI
+    weight: 8

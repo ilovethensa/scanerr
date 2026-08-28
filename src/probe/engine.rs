@@ -237,8 +237,10 @@ fn probe_priority(proto: Protocol) -> u32 {
 }
 
 async fn read_banner(ip: &str, port: u16) -> Result<Vec<u8>> {
+    // Tight connect/read timeouts: a banner-less service (e.g. HTTP) must leave room for the
+    // HTTP/HTTPS/TLS fallback inside the outer safety cap. See .agents/probe-analysis.md.
     let stream = tokio::time::timeout(
-        std::time::Duration::from_secs(3),
+        std::time::Duration::from_secs(2),
         TcpStream::connect(format!("{}:{}", ip, port)),
     )
     .await
@@ -250,7 +252,7 @@ async fn read_banner(ip: &str, port: u16) -> Result<Vec<u8>> {
 
     let mut buf = [0u8; 4096];
     let n = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
+        std::time::Duration::from_secs(2),
         stream.read(&mut buf),
     )
     .await

@@ -1,0 +1,19 @@
+id: sap-netweaver
+name: SAP NetWeaver
+category: erp
+tags: [erp, sap, java]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: NWA
+    weight: 6
+  - field: http.body
+    op: contains
+    value: /NWA/VAADIN/themes/
+    weight: 10
+  - field: http.header.server
+    op: equals
+    value: Apache-Coyote/1.1
+    weight: 3

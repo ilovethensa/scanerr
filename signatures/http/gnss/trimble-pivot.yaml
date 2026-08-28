@@ -1,0 +1,19 @@
+id: trimble-pivot
+name: Trimble Pivot Web
+category: gnss
+tags: [gnss, gps, correction]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Trimble Pivot Web
+    weight: 10
+  - field: http.body
+    op: contains
+    value: TimezoneOffset.svc
+    weight: 7
+  - field: ssl.subject_cn
+    op: contains
+    value: GNSS
+    weight: 5
