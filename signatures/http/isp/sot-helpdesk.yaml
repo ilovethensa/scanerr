@@ -1,0 +1,15 @@
+id: sot-helpdesk
+name: SOT Helpdesk
+category: isp
+tags: [isp, helpdesk, bulgarian]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: SOT Helpdesk
+    weight: 8
+  - field: http.body
+    op: contains
+    value: SOT Helpdesk
+    weight: 5

@@ -1,0 +1,19 @@
+id: barsy
+name: Barsy
+category: webapp
+tags: [cms, ecommerce, bulgarian]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Barsy
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Barsy
+    weight: 5
+  - field: http.body
+    op: contains
+    value: /adminx/
+    weight: 5

@@ -9,7 +9,3 @@ matchers:
     op: contains
     value: TRAEFIK DEFAULT CERT
     weight: 10
-  - field: http.body
-    op: equals
-    value: "404 page not found\n"
-    weight: 5

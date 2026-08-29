@@ -1,0 +1,15 @@
+id: ccbilling
+name: CCBilling
+category: isp
+tags: [isp, billing]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: icontains
+    value: CCBilling
+    weight: 8
+  - field: http.body
+    op: contains
+    value: checklogin.php
+    weight: 4

@@ -7,17 +7,9 @@ condition: any
 matchers:
   - field: http.body
     op: contains
-    value: /doc/page/login.asp
-    weight: 8
-  - field: http.body
-    op: contains
     value: hikvision.com
     weight: 7
   - field: http.title
     op: contains
     value: Hikvision
     weight: 8
-  - field: http.body
-    op: contains
-    value: /doc/page/
-    weight: 5

@@ -1,0 +1,19 @@
+id: carbonio
+name: Carbonio
+category: mail
+tags: [mail, collaboration, zextras]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Carbonio Authentication
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Carbonio Authentication
+    weight: 8
+  - field: http.body
+    op: contains
+    value: zextras.tools
+    weight: 6

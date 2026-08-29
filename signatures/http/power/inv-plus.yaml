@@ -1,0 +1,15 @@
+id: inv-plus
+name: INV PLUS
+category: power
+tags: [inverter, solar, webserver]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: INV PLUS
+    weight: 8
+  - field: http.body
+    op: contains
+    value: INV PLUS
+    weight: 5

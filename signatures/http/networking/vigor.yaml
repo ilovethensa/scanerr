@@ -1,0 +1,15 @@
+id: vigor
+name: DrayTek Vigor
+category: networking
+tags: [router, vigor, draytek]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Vigor Login Page
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Vigor Login Page
+    weight: 5

@@ -1,0 +1,15 @@
+id: gpon-ont
+name: GPON ONT
+category: networking
+tags: [gpon, ont, modem]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: GPON ONT
+    weight: 8
+  - field: http.body
+    op: contains
+    value: GPON ONT
+    weight: 5

@@ -1,0 +1,19 @@
+id: riskont
+name: Riskont
+category: webapp
+tags: [riskont, bulgarian, access-control]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Рисконт
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Мобилен Рисконт
+    weight: 6
+  - field: http.body
+    op: contains
+    value: Riskont
+    weight: 5

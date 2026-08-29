@@ -33,3 +33,7 @@ matchers:
     op: contains
     value: rpcLogin.js
     weight: 5
+  - field: http.body
+    op: contains
+    value: /doc/page/login.asp
+    weight: 4

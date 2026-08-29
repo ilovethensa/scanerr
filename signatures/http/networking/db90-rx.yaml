@@ -1,0 +1,15 @@
+id: db90-rx
+name: DB90-RX
+category: networking
+tags: [receiver, dvb, broadcast, status]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: DB90-RX
+    weight: 8
+  - field: http.body
+    op: contains
+    value: DB90-RX
+    weight: 5

@@ -11,9 +11,5 @@ matchers:
     weight: 8
   - field: http.body
     op: contains
-    value: apple-mobile-web-app-title
-    weight: 3
-  - field: http.body
-    op: contains
     value: miniflux
     weight: 5

@@ -1,0 +1,19 @@
+id: portainer
+name: Portainer
+category: webapp
+tags: [containers, docker, management]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Portainer
+    weight: 8
+  - field: http.body
+    op: contains
+    value: ng-app="portainer"
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Portainer.io
+    weight: 6

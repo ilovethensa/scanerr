@@ -1,0 +1,15 @@
+id: csw-dhcp
+name: CSW DHCP
+category: networking
+tags: [dhcp, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: CSW DHCP
+    weight: 8
+  - field: http.body
+    op: contains
+    value: CSW DHCP
+    weight: 5

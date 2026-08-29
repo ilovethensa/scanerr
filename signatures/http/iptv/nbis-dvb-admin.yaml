@@ -1,0 +1,19 @@
+id: nbis-dvb-admin
+name: NBIS DVB Admin
+category: iptv
+tags: [dvb, iptv, streaming, admin]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: NBIS DVB Admin
+    weight: 8
+  - field: http.header.server
+    op: equals
+    value: DVB Admin
+    weight: 6
+  - field: http.body
+    op: contains
+    value: DVB Admin
+    weight: 5

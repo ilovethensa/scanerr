@@ -15,10 +15,6 @@ matchers:
     weight: 5
   - field: http.body
     op: contains
-    value: /doc/page/login.asp
-    weight: 4
-  - field: http.body
-    op: contains
     value: multiVideoActiveX
     weight: 8
   - field: http.body

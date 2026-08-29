@@ -1,0 +1,15 @@
+id: xweb-evo
+name: XWEB EVO
+category: iot
+tags: [hvac, xweb, web]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: XWEB EVO
+    weight: 8
+  - field: http.body
+    op: contains
+    value: XWEB EVO
+    weight: 5

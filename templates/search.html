@@ -26,6 +26,12 @@
         .svc-table td { padding: 10px 12px; border-bottom: 1px solid #141a22; font-size: 14px; }
         .svc-table tr:hover td { background: #11161d; }
         .svc-table .ip { color: #4da3ff; font-family: monospace; }
+        .svc-table .ip-cell { display: flex; align-items: center; gap: 8px; }
+        .ip-copy { cursor: pointer; user-select: none; display: inline-block; font-family: monospace; background: #0a0e14; border: 1px solid #1e2733; border-radius: 4px; padding: 1px 8px; color: #c5cdd9; }
+        .ip-copy:hover { border-color: #4da3ff; }
+        .ip-copy.copied { color: #6ee787; border-color: #6ee787; }
+        .svc-table .open-btn { font-size: 13px; color: #6ee787; border: 1px solid #1e2733; border-radius: 3px; padding: 0 6px; line-height: 1.6; }
+        .svc-table .open-btn:hover { text-decoration: none; border-color: #6ee787; }
         .svc-table .port { color: #c5cdd9; font-weight: 600; font-family: monospace; }
         .svc-table .proto { color: #6b7a8d; font-family: monospace; font-size: 13px; }
         .svc-table .product { color: #c5cdd9; }
@@ -69,8 +75,14 @@
                 {% set product = d.product | default(value="") %}
                 {% set kind = d.kind | default(value="unknown") %}
                 {% set tags = d.tags | default(value=[]) %}
-                <tr>
-                    <td class="ip"><a href="/hosts/{{ s.ip }}">{{ s.ip }}</a></td>
+                {% set is_https = ("https" in tags) or (s.port == 443) or (s.port == 8443) %}
+                <tr class="svc-row" data-url="/hosts/{{ s.ip }}" style="cursor: pointer;">
+                    <td class="ip">
+                        <div class="ip-cell">
+                            <span class="ip-copy" data-ipport="{{ s.ip }}:{{ s.port }}" title="Click to copy ip:port">{{ s.ip }}:{{ s.port }}</span>
+                            {% if "web" in tags %}{% if is_https %}<a class="open-btn" href="https://{{ s.ip }}:{{ s.port }}" target="_blank" rel="noopener" title="Open in browser">open ↗</a>{% else %}<a class="open-btn" href="http://{{ s.ip }}:{{ s.port }}" target="_blank" rel="noopener" title="Open in browser">open ↗</a>{% endif %}{% endif %}
+                        </div>
+                    </td>
                     <td class="port">{{ s.port }}</td>
                     <td class="proto">{{ s.transport }}</td>
                     <td class="product">
@@ -91,5 +103,41 @@
         <div class="empty">No services found matching your query</div>
         {% endif %}
     </div>
+    <script>
+        function copyText(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text);
+            }
+            return new Promise(function (resolve, reject) {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                try { document.execCommand('copy') ? resolve() : reject(); }
+                finally { document.body.removeChild(ta); }
+            });
+        }
+        document.querySelectorAll('.ip-copy').forEach(function (el) {
+            el.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var text = el.getAttribute('data-ipport');
+                copyText(text).then(function () {
+                    el.classList.add('copied');
+                    var prev = el.textContent;
+                    el.textContent = 'copied!';
+                    setTimeout(function () { el.textContent = prev; el.classList.remove('copied'); }, 1000);
+                });
+            });
+        });
+        document.querySelectorAll('.svc-row').forEach(function (row) {
+            row.addEventListener('click', function (e) {
+                if (e.target.closest('.ip-copy') || e.target.closest('.open-btn')) return;
+                window.location.href = row.getAttribute('data-url');
+            });
+        });
+    </script>
 </body>
 </html>

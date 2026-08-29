@@ -1,0 +1,15 @@
+id: grusher
+name: Grusher
+category: networking
+tags: [diagnostic, networking, netlan]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: Grusher
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Grusher
+    weight: 5

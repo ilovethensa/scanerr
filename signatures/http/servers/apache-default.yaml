@@ -1,0 +1,15 @@
+id: apache-default
+name: Apache Default Page
+category: server
+tags: [apache, default-page, web]
+priority: 60
+condition: all
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: Apache
+    weight: 5
+  - field: http.body
+    op: contains
+    value: <h1>It works!</h1>
+    weight: 5

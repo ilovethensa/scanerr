@@ -1,0 +1,19 @@
+id: nginx-default
+name: Nginx Default Page
+category: server
+tags: [nginx, default-page, web]
+priority: 60
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Welcome to nginx!
+    weight: 8
+  - field: http.body
+    op: contains
+    value: Thank you for using nginx.
+    weight: 6
+  - field: http.body
+    op: contains
+    value: Welcome to nginx!
+    weight: 5

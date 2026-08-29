@@ -33,6 +33,10 @@ matchers:
     op: contains
     value: tp-link-tether
     weight: 6
+  - field: http.body
+    op: contains
+    value: dynaform
+    weight: 6
   - field: ssl.subject_cn
     op: equals
     value: tplinkwifi.net

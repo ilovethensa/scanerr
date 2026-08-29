@@ -13,7 +13,3 @@ matchers:
     op: contains
     value: "prefers-color-scheme: dark"
     weight: 4
-  - field: http.body
-    op: contains
-    value: login.js
-    weight: 3
