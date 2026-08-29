@@ -6,6 +6,7 @@ use tokio::net::TcpStream;
 use crate::models::{ServiceData, SshData, Protocol};
 
 use super::engine::ProtocolProbe;
+use super::net;
 
 pub struct SshProbe;
 
@@ -16,21 +17,20 @@ impl ProtocolProbe for SshProbe {
         String::from_utf8_lossy(bytes).starts_with("SSH-")
     }
     async fn probe(&self, ip: &str, port: u16, banner: &[u8], ua: &str) -> Result<ServiceData> {
-        probe_ssh(ip, port, ua, banner).await
+        probe(ip, port, ua, banner).await
     }
 }
 
 /// Connect to an SSH server, do the version exchange + KEXINIT to extract
 /// the host key and fingerprint. Returns enriched ServiceData.
 /// `banner` is the pre-read banner bytes from the identifier.
-pub async fn probe_ssh(ip: &str, port: u16, _user_agent: &str, banner: &[u8]) -> Result<ServiceData> {
+pub async fn probe(ip: &str, port: u16, _user_agent: &str, banner: &[u8]) -> Result<ServiceData> {
     // Parse the banner we already have (may be empty if server waits for client)
     let server_version = String::from_utf8_lossy(banner).trim().to_string();
-    let (product, version) = parse_ssh_version(&server_version);
+    let (product, version) = parse_version(&server_version);
 
     // Re-connect for the key exchange (we need a fresh stream after reading the banner)
-    let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).await?;
-    stream.set_nodelay(true)?;
+    let mut stream = net::connect(ip, port, std::time::Duration::from_secs(5)).await?;
 
     // Try to read server version — some servers send it immediately, others wait
     let mut buf = [0u8; 4096];
@@ -48,7 +48,7 @@ pub async fn probe_ssh(ip: &str, port: u16, _user_agent: &str, banner: &[u8]) ->
     }
 
     // Parse product/version from whichever version string we got
-    let (product2, version2) = parse_ssh_version(&server_version2);
+    let (product2, version2) = parse_version(&server_version2);
     let final_product = product2.or(product);
     let final_version = version2.or(version);
     let final_banner = if !server_version2.is_empty() { server_version2 } else { server_version };
@@ -59,47 +59,45 @@ pub async fn probe_ssh(ip: &str, port: u16, _user_agent: &str, banner: &[u8]) ->
     }
 
     // Send KEXINIT with reasonable algorithm lists
-    let kexinit = build_kexinit();
-    send_msg(&mut stream, &kexinit).await?;
+    let kexinit = kexinit();
+    net::send(&mut stream, &kexinit).await;
 
     // Read server KEXINIT
-    let _server_kexinit = read_ssh_msg(&mut stream).await.unwrap_or_default();
+    let _server_kexinit = read_msg(&mut stream).await.unwrap_or_default();
 
     // Send our DH init (g=2, random x, compute g^x mod p)
     // We use a minimal DH to trigger the server's KEXDH_REPLY which contains the host key
-    let (dh_init, _priv_key_bytes) = build_kexdh_init()?;
-    send_msg(&mut stream, &dh_init).await?;
+    let (dh_init, _priv_key_bytes) = dh_init()?;
+    net::send(&mut stream, &dh_init).await;
 
     // Read server response — should contain KEXDH_REPLY with host key
     let host_key_info = loop {
-        match read_ssh_msg(&mut stream).await {
+        match read_msg(&mut stream).await {
             Ok(msg) if msg.len() > 0 && msg[0] == 31 => { // SSH_MSG_KEXDH_REPLY = 31
-                break parse_host_key_from_reply(&msg);
+                break parse_reply(&msg);
             }
             Ok(_msg) => continue, // skip other messages
             Err(_) => break None,
         }
     };
 
-    let mut data = ServiceData::default();
-    data.kind = "ssh".into();
-    data.product = final_product.clone();
-    data.version = final_version.clone();
-    data.banner = Some(final_banner.clone());
-
-    data.ssh = Some(SshData {
-        raw: final_banner,
-        key_type: host_key_info.as_ref().and_then(|k| k.0.clone()),
-        key: host_key_info.as_ref().and_then(|k| k.1.clone()),
-        fingerprint: host_key_info.as_ref().and_then(|k| k.2.clone()),
-        product: final_product,
-        version: final_version,
-    });
-
-    Ok(data)
+    Ok(ServiceData {
+        product: final_product.clone(),
+        version: final_version.clone(),
+        banner: Some(final_banner.clone()),
+        ssh: Some(SshData {
+            raw: final_banner,
+            key_type: host_key_info.as_ref().and_then(|k| k.0.clone()),
+            key: host_key_info.as_ref().and_then(|k| k.1.clone()),
+            fingerprint: host_key_info.as_ref().and_then(|k| k.2.clone()),
+            product: final_product,
+            version: final_version,
+        }),
+        ..Default::default()
+    })
 }
 
-fn parse_ssh_version(version: &str) -> (Option<String>, Option<String>) {
+fn parse_version(version: &str) -> (Option<String>, Option<String>) {
     // Format: SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u1
     let rest = version.strip_prefix("SSH-2.0-").unwrap_or(version);
     // Split on first space to separate "OpenSSH_9.2p1" from "Debian-2+deb12u1"
@@ -123,7 +121,7 @@ fn parse_ssh_version(version: &str) -> (Option<String>, Option<String>) {
     (clean_prod, clean_ver)
 }
 
-fn build_kexinit() -> Vec<u8> {
+fn kexinit() -> Vec<u8> {
 
     // SSH_MSG_KEXINIT (20) with random cookie (16 bytes)
     let mut payload = Vec::new();
@@ -151,10 +149,10 @@ fn build_kexinit() -> Vec<u8> {
     payload.push(0); // first_kex_packet_follows
     payload.extend_from_slice(&[0, 0, 0, 0]); // reserved
 
-    wrap_ssh_msg(&payload)
+    wrap(&payload)
 }
 
-fn build_kexdh_init() -> Result<(Vec<u8>, Vec<u8>)> {
+fn dh_init() -> Result<(Vec<u8>, Vec<u8>)> {
     // SSH_MSG_KEXDH_INIT (30)
     // Generate a simple private key (just for triggering the server reply)
     let mut msg = Vec::new();
@@ -163,10 +161,10 @@ fn build_kexdh_init() -> Result<(Vec<u8>, Vec<u8>)> {
     let e: [u8; 32] = [0x02; 32]; // 2^8 or similar small value
     msg.extend_from_slice(&e);
 
-    Ok((wrap_ssh_msg(&msg), e.to_vec()))
+    Ok((wrap(&msg), e.to_vec()))
 }
 
-fn wrap_ssh_msg(payload: &[u8]) -> Vec<u8> {
+fn wrap(payload: &[u8]) -> Vec<u8> {
     let len = payload.len() as u32;
     let mut out = Vec::with_capacity(4 + payload.len());
     out.extend_from_slice(&len.to_be_bytes());
@@ -174,12 +172,8 @@ fn wrap_ssh_msg(payload: &[u8]) -> Vec<u8> {
     out
 }
 
-async fn send_msg(stream: &mut TcpStream, data: &[u8]) -> Result<()> {
-    stream.write_all(data).await?;
-    Ok(())
-}
 
-async fn read_ssh_msg(stream: &mut TcpStream) -> Result<Vec<u8>> {
+async fn read_msg(stream: &mut TcpStream) -> Result<Vec<u8>> {
     let mut len_buf = [0u8; 4];
     tokio::time::timeout(std::time::Duration::from_secs(5), stream.read_exact(&mut len_buf)).await??;
     let len = u32::from_be_bytes(len_buf) as usize;
@@ -194,7 +188,7 @@ async fn read_ssh_msg(stream: &mut TcpStream) -> Result<Vec<u8>> {
 /// Parse the host key from SSH_MSG_KEXDH_REPLY.
 /// Format: byte SSH_MSG_KEXDH_REPLY, mpint f, string host_key_type, string host_key, string signature, string hash
 /// Returns (key_type, base64_key, fingerprint)
-fn parse_host_key_from_reply(msg: &[u8]) -> Option<(Option<String>, Option<String>, Option<String>)> {
+fn parse_reply(msg: &[u8]) -> Option<(Option<String>, Option<String>, Option<String>)> {
     if msg.len() < 5 || msg[0] != 31 {
         return None;
     }
@@ -239,20 +233,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_ssh_version() {
-        let (product, version) = parse_ssh_version("SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u1");
+    fn test_parse_version() {
+        let (product, version) = parse_version("SSH-2.0-OpenSSH_9.2p1 Debian-2+deb12u1");
         assert_eq!(product.as_deref(), Some("OpenSSH"));
         assert_eq!(version.as_deref(), Some("9.2p1"));
 
-        let (product, version) = parse_ssh_version("SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4");
+        let (product, version) = parse_version("SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4");
         assert_eq!(product.as_deref(), Some("OpenSSH"));
         assert_eq!(version.as_deref(), Some("10.0p2"));
     }
 
     #[tokio::test]
     async fn test_probe_ssh() {
-        let data = probe_ssh("192.168.1.111", 22, "scanerr", b"SSH-2.0-OpenSSH_9.2p1\r\n").await.unwrap();
-        assert_eq!(data.kind, "ssh");
+        let data = probe("192.168.1.111", 22, "scanerr", b"SSH-2.0-OpenSSH_9.2p1\r\n").await.unwrap();
         assert_eq!(data.product.as_deref(), Some("OpenSSH"));
         assert!(data.ssh.is_some());
     }

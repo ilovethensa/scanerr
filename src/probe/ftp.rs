@@ -1,244 +1,136 @@
 use anyhow::Result;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::time::Duration;
 use tokio::net::TcpStream;
 
-use crate::models::ServiceData;
+use crate::models::{FtpData, Protocol, ServiceData};
 
 use super::engine::ProtocolProbe;
-use crate::models::Protocol;
+use super::net;
+
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
+const REPLY_TIMEOUT: Duration = Duration::from_secs(3);
+const DATA_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub struct FtpProbe;
 
 impl ProtocolProbe for FtpProbe {
-    fn protocol(&self) -> Protocol { Protocol::Ftp }
+    fn protocol(&self) -> Protocol {
+        Protocol::Ftp
+    }
+
     fn detects_banner(&self, bytes: &[u8]) -> bool {
         let text = String::from_utf8_lossy(bytes);
         text.starts_with("220 ") || text.starts_with("220-")
     }
+
     async fn probe(&self, ip: &str, port: u16, banner: &[u8], _ua: &str) -> Result<ServiceData> {
-        probe_ftp(ip, port, banner).await
+        probe(ip, port, banner).await
     }
 }
 
-pub async fn probe_ftp(ip: &str, port: u16, _banner: &[u8]) -> Result<ServiceData> {
-    let mut stream = TcpStream::connect(format!("{}:{}", ip, port)).await?;
-    stream.set_nodelay(true)?;
-
-    // Read banner
-    let mut buf = [0u8; 4096];
-    let n = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
-        stream.read(&mut buf),
-    )
-    .await
-    .unwrap_or(Ok(0))?;
-
-    let banner_text = String::from_utf8_lossy(&buf[..n]).to_string();
-    let mut software = None;
-
-    if let Some(welcome) = banner_text.strip_prefix("220 ") {
-        if let Some(start) = welcome.find('(') {
-            if let Some(end) = welcome[start..].find(')') {
-                software = Some(welcome[start+1..start+end].to_string());
-            }
-        }
-    }
-
-    // SYST
-    stream.write_all(b"SYST\r\n").await.ok();
-    let mut syst_buf = [0u8; 4096];
-    let syst_n = tokio::time::timeout(
-        std::time::Duration::from_secs(3),
-        stream.read(&mut syst_buf),
-    )
-    .await
-    .unwrap_or(Ok(0))
-    .unwrap_or(0);
-
-    let system = if syst_n > 0 {
-        let syst_text = String::from_utf8_lossy(&syst_buf[..syst_n]).to_string();
-        syst_text.strip_prefix("215 ").map(|s| s.trim().to_string())
+pub async fn probe(ip: &str, port: u16, banner: &[u8]) -> Result<ServiceData> {
+    let banner_text = if !banner.is_empty() {
+        String::from_utf8_lossy(banner).to_string()
     } else {
-        None
+        let mut stream = net::connect(ip, port, CONNECT_TIMEOUT).await?;
+        net::read_reply(&mut stream, CONNECT_TIMEOUT).await
     };
 
-    // FEAT
-    stream.write_all(b"FEAT\r\n").await.ok();
-    let mut feat_buf = Vec::new();
-    let mut tmp = [0u8; 4096];
-    loop {
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            stream.read(&mut tmp),
-        ).await {
-            Ok(Ok(0)) => break,
-            Ok(Ok(n)) => {
-                feat_buf.extend_from_slice(&tmp[..n]);
-                if let Ok(text) = std::str::from_utf8(&feat_buf) {
-                    if text.contains("211 End") || text.contains("211-End") {
-                        break;
-                    }
-                }
-            }
-            _ => break,
-        }
-    }
-
-    let mut features = Vec::new();
-    if !feat_buf.is_empty() {
-        let feat_text = String::from_utf8_lossy(&feat_buf).to_string();
-        for line in feat_text.lines() {
-            if line.starts_with(' ') {
-                let feat = line.trim();
-                if !feat.is_empty() && !feat.starts_with('-') {
-                    features.push(feat.to_string());
-                }
-            }
-        }
-    }
-
-    // HELP — full command list
-    stream.write_all(b"HELP\r\n").await.ok();
-    let mut help_buf = Vec::new();
-    let mut tmp2 = [0u8; 4096];
-    loop {
-        match tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            stream.read(&mut tmp2),
-        ).await {
-            Ok(Ok(0)) => break,
-            Ok(Ok(n)) => {
-                help_buf.extend_from_slice(&tmp2[..n]);
-                if let Ok(text) = std::str::from_utf8(&help_buf) {
-                    if text.contains("214 Direct") || text.contains("214 End") {
-                        break;
-                    }
-                }
-            }
-            _ => break,
-        }
-    }
-
-    let commands = if !help_buf.is_empty() {
-        let help_text = String::from_utf8_lossy(&help_buf).to_string();
-        let cmds: Vec<String> = help_text.lines()
-            .filter(|l| l.starts_with(' '))
-            .flat_map(|l| l.split_whitespace())
-            .map(|c| c.trim_end_matches('*').to_string())
-            .filter(|c| !c.is_empty() && !c.starts_with('=') && !c.starts_with('-'))
-            .collect();
-        if cmds.is_empty() { None } else { Some(cmds) }
-    } else {
-        None
-    };
-
-    // Try anonymous login
-    let mut anon_listing = None;
-    stream.write_all(b"USER anonymous\r\n").await.ok();
-    let mut user_buf = [0u8; 4096];
-    let user_n = tokio::time::timeout(
-        std::time::Duration::from_secs(3),
-        stream.read(&mut user_buf),
-    )
-    .await
-    .unwrap_or(Ok(0))
-    .unwrap_or(0);
-
-    let user_resp = String::from_utf8_lossy(&user_buf[..user_n]).to_string();
-
-    if user_resp.starts_with("331") {
-        // Password required, send empty password
-        stream.write_all(b"PASS anonymous@\r\n").await.ok();
-        let mut pass_buf = [0u8; 4096];
-        let pass_n = tokio::time::timeout(
-            std::time::Duration::from_secs(3),
-            stream.read(&mut pass_buf),
-        )
-        .await
-        .unwrap_or(Ok(0))
-        .unwrap_or(0);
-
-        let pass_resp = String::from_utf8_lossy(&pass_buf[..pass_n]).to_string();
-
-        if pass_resp.starts_with("230") {
-            // Login successful — try to list
-            // First try PASV
-            stream.write_all(b"PASV\r\n").await.ok();
-            let mut pasv_buf = [0u8; 4096];
-            let pasv_n = tokio::time::timeout(
-                std::time::Duration::from_secs(3),
-                stream.read(&mut pasv_buf),
-            )
-            .await
-            .unwrap_or(Ok(0))
-            .unwrap_or(0);
-
-            let pasv_resp = String::from_utf8_lossy(&pasv_buf[..pasv_n]).to_string();
-
-            if let Some(addr) = parse_pasv(&pasv_resp) {
-                // Connect to data port
-                if let Ok(mut data_stream) = TcpStream::connect(&addr).await {
-                    // LIST
-                    stream.write_all(b"LIST\r\n").await.ok();
-
-                    let mut listing = Vec::new();
-                    let mut data_tmp = [0u8; 4096];
-                    loop {
-                        match tokio::time::timeout(
-                            std::time::Duration::from_secs(5),
-                            data_stream.read(&mut data_tmp),
-                        ).await {
-                            Ok(Ok(0)) => break,
-                            Ok(Ok(n)) => listing.extend_from_slice(&data_tmp[..n]),
-                            _ => break,
-                        }
-                    }
-
-                    // Read the transfer complete response from control channel
-                    let mut resp_buf = [0u8; 4096];
-                    let _ = tokio::time::timeout(
-                        std::time::Duration::from_secs(3),
-                        stream.read(&mut resp_buf),
-                    ).await;
-
-                    if !listing.is_empty() {
-                        let text = String::from_utf8_lossy(&listing).to_string();
-                        anon_listing = Some(text);
-                    }
-                }
-            }
-        }
-    }
-
-    stream.write_all(b"QUIT\r\n").await.ok();
-
-    let mut data = ServiceData::default();
-    data.kind = "ftp".into();
-    data.product = software;
-    data.banner = Some(banner_text.trim().to_string());
-    data.ftp = Some(crate::models::FtpData {
-        system,
-        features: if features.is_empty() { None } else { Some(features) },
-        commands,
-        anonymous_listing: anon_listing,
+    let software = banner_text.strip_prefix("220 ").and_then(|welcome| {
+        let start = welcome.find('(')?;
+        let end = welcome[start..].find(')')?;
+        Some(welcome[start + 1..start + end].to_string())
     });
 
-    Ok(data)
+    // Reconnect for interactive commands — discard the greeting, already captured above.
+    let mut stream = net::connect(ip, port, CONNECT_TIMEOUT).await?;
+    let _ = net::read_reply(&mut stream, REPLY_TIMEOUT).await;
+
+    net::send(&mut stream, b"SYST\r\n").await;
+    let system = net::read_reply(&mut stream, REPLY_TIMEOUT)
+        .await
+        .strip_prefix("215 ")
+        .map(|s| s.trim().to_string());
+
+    net::send(&mut stream, b"FEAT\r\n").await;
+    let feat_buf =
+        net::read_until(&mut stream, REPLY_TIMEOUT, |t| t.contains("211 End") || t.contains("211-End"))
+            .await;
+    let features: Vec<String> = String::from_utf8_lossy(&feat_buf)
+        .lines()
+        .filter(|l| l.starts_with(' '))
+        .map(|l| l.trim())
+        .filter(|f| !f.is_empty() && !f.starts_with('-'))
+        .map(str::to_string)
+        .collect();
+
+    net::send(&mut stream, b"HELP\r\n").await;
+    let help_buf = net::read_until(&mut stream, REPLY_TIMEOUT, |t| {
+        t.contains("214 Direct") || t.contains("214 End")
+    })
+    .await;
+    let commands: Vec<String> = String::from_utf8_lossy(&help_buf)
+        .lines()
+        .filter(|l| l.starts_with(' '))
+        .flat_map(|l| l.split_whitespace())
+        .map(|c| c.trim_end_matches('*').to_string())
+        .filter(|c| !c.is_empty() && !c.starts_with('=') && !c.starts_with('-'))
+        .collect();
+
+    let anon_listing = try_anonymous_listing(&mut stream).await;
+    net::send(&mut stream, b"QUIT\r\n").await;
+
+    Ok(ServiceData {
+        product: software,
+        banner: Some(banner_text.trim().to_string()),
+        ftp: Some(FtpData {
+            system,
+            features: (!features.is_empty()).then_some(features),
+            commands: (!commands.is_empty()).then_some(commands),
+            anonymous_listing: anon_listing,
+        }),
+        ..Default::default()
+    })
 }
 
-/// Parse PASV response: "227 Entering Passive Mode (h1,h2,h3,h4,p1,p2)"
-/// Returns "h1.h2.h3.h4:(p1*256+p2)" string
+async fn try_anonymous_listing(stream: &mut TcpStream) -> Option<String> {
+    net::send(stream, b"USER anonymous\r\n").await;
+    if !net::read_reply(stream, REPLY_TIMEOUT)
+        .await
+        .starts_with("331")
+    {
+        return None;
+    }
+
+    net::send(stream, b"PASS anonymous@\r\n").await;
+    if !net::read_reply(stream, REPLY_TIMEOUT)
+        .await
+        .starts_with("230")
+    {
+        return None;
+    }
+
+    net::send(stream, b"PASV\r\n").await;
+    let pasv_resp = net::read_reply(stream, REPLY_TIMEOUT).await;
+    let addr = parse_pasv(&pasv_resp)?;
+    let mut data_stream = TcpStream::connect(&addr).await.ok()?;
+
+    net::send(stream, b"LIST\r\n").await;
+    let listing = net::read_until(&mut data_stream, DATA_TIMEOUT, |_| false).await;
+    let _ = net::read_reply(stream, REPLY_TIMEOUT).await;
+
+    (!listing.is_empty()).then(|| String::from_utf8_lossy(&listing).to_string())
+}
+
 fn parse_pasv(resp: &str) -> Option<String> {
     let start = resp.find('(')?;
     let end = resp[start..].find(')')?;
-    let inner = &resp[start + 1..start + end];
-    let parts: Vec<&str> = inner.split(',').collect();
+    let parts: Vec<&str> = resp[start + 1..start + end].split(',').collect();
     if parts.len() != 6 {
         return None;
     }
     let ip = format!("{}.{}.{}.{}", parts[0], parts[1], parts[2], parts[3]);
     let p1: u16 = parts[4].parse().ok()?;
     let p2: u16 = parts[5].parse().ok()?;
-    let port = p1 * 256 + p2;
-    Some(format!("{}:{}", ip, port))
+    Some(format!("{}:{}", ip, p1 * 256 + p2))
 }

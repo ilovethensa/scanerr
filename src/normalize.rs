@@ -54,9 +54,6 @@ fn product_override(raw: &str) -> Option<&'static str> {
         "MikroTik" => Some("mikrotik"),
         "MikroTik RouterOS" => Some("mikrotik"),
         "MikroTik EQUINIX SO1 CORE" => Some("mikrotik"),
-        "Hikvision" => Some("hikvision"),
-        "Hikvision NVR/DVR" => Some("hikvision"),
-        "Hikvision IPCam" => Some("hikvision"),
         "MariaDB" => Some("mariadb"),
         "MySQL" => Some("mysql"),
         "Google Web Server" => Some("gws"),
@@ -158,7 +155,7 @@ fn canonical_tag(raw: &str) -> Option<String> {
         "tracking" | "gps" | "fleet-management" => "tracking",
 
         // Product/vendor tags — drop (covered by product field)
-        "nginx" | "openresty" | "hikvision" | "nvr" | "dvr" | "ubiquiti"
+        "nginx" | "openresty" | "nvr" | "dvr" | "ubiquiti"
         | "unifi" | "mikrotik" | "dropbear" | "cisco" | "btest" => return None,
 
         // Already on the allowlist — pass through if valid
@@ -288,7 +285,6 @@ mod tests {
         assert_eq!(canonical_product("Apache httpd"), "apache");
         assert_eq!(canonical_product("Microsoft IIS"), "iis");
         assert_eq!(canonical_product("MikroTik"), "mikrotik");
-        assert_eq!(canonical_product("Hikvision NVR/DVR"), "hikvision");
         assert_eq!(canonical_product("Unknown Software"), "unknown-software");
     }
 
@@ -299,7 +295,6 @@ mod tests {
         assert_eq!(canonical_tag("email"), Some("mail".to_string()));
         assert_eq!(canonical_tag("routing"), Some("networking".to_string()));
         assert_eq!(canonical_tag("nginx"), None); // product, not category
-        assert_eq!(canonical_tag("hikvision"), None); // vendor
         assert_eq!(canonical_tag("btest"), None); // feature name
         assert_eq!(canonical_tag("device:123"), None); // dynamic garbage
         assert_eq!(canonical_tag("mikrotik"), None); // vendor
@@ -319,18 +314,18 @@ mod tests {
         let mut data = ServiceData {
             kind: "https".into(),
             product: Some("Apache httpd".into()),
-            tags: vec!["nginx".into(), "mail".into(), "device:xyz".into(), "hikvision".into()],
+            tags: vec!["nginx".into(), "mail".into(), "device:xyz".into(), "ubiquiti".into()],
             ..Default::default()
         };
         normalize_service(&mut data);
         assert_eq!(data.kind, "http");
         assert_eq!(data.product.as_deref(), Some("apache"));
         // Should contain: web (from http kind), mail (from existing tag)
-        // Should NOT contain: nginx (product), device:xyz (garbage), hikvision (vendor)
+        // Should NOT contain: nginx (product), device:xyz (garbage), ubiquiti (vendor)
         assert!(data.tags.contains(&"web".to_string()));
         assert!(data.tags.contains(&"mail".to_string()));
         assert!(!data.tags.contains(&"nginx".to_string()));
-        assert!(!data.tags.contains(&"hikvision".to_string()));
+        assert!(!data.tags.contains(&"ubiquiti".to_string()));
         assert!(!data.tags.iter().any(|t| t.starts_with("device:")));
     }
 }

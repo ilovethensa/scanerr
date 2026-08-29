@@ -46,7 +46,7 @@ impl rustls::client::danger::ServerCertVerifier for NoVerifier {
     }
 }
 
-pub async fn tls_connect(
+pub async fn connect(
     ip: &str,
     port: u16,
 ) -> Result<(TlsStream<TcpStream>, SslData)> {
@@ -69,12 +69,12 @@ pub async fn tls_connect(
         .peer_certificates()
         .and_then(|certs| certs.first().cloned());
 
-    let ssl_data = extract_ssl_data(peer_cert.as_ref());
+    let ssl_data = ssl_data(peer_cert.as_ref());
 
     Ok((tls_stream, ssl_data))
 }
 
-fn extract_ssl_data(cert: Option<&rustls::pki_types::CertificateDer<'static>>) -> SslData {
+fn ssl_data(cert: Option<&rustls::pki_types::CertificateDer<'static>>) -> SslData {
     match cert {
         Some(cert) => {
             let (_, parsed) = match X509Certificate::from_der(cert.as_ref()) {
@@ -89,11 +89,11 @@ fn extract_ssl_data(cert: Option<&rustls::pki_types::CertificateDer<'static>>) -
             };
 
             // 2.5.4.3=CN, 2.5.4.10=O
-            let subject_cn = find_dn_attr(&parsed.subject(), "2.5.4.3")
-                .or_else(|| find_dn_attr(&parsed.subject(), "2.5.4.10"));
+            let subject_cn = find_attr(&parsed.subject(), "2.5.4.3")
+                .or_else(|| find_attr(&parsed.subject(), "2.5.4.10"));
 
-            let issuer_cn = find_dn_attr(&parsed.issuer(), "2.5.4.3")
-                .or_else(|| find_dn_attr(&parsed.issuer(), "2.5.4.10"));
+            let issuer_cn = find_attr(&parsed.issuer(), "2.5.4.3")
+                .or_else(|| find_attr(&parsed.issuer(), "2.5.4.10"));
 
             let self_signed = parsed.subject().to_string() == parsed.issuer().to_string();
 
@@ -111,7 +111,7 @@ fn extract_ssl_data(cert: Option<&rustls::pki_types::CertificateDer<'static>>) -
     }
 }
 
-fn find_dn_attr(name: &X509Name, target_oid: &str) -> Option<String> {
+fn find_attr(name: &X509Name, target_oid: &str) -> Option<String> {
     for rdn in name.iter() {
         for attr in rdn.iter() {
             let oid_str = attr.attr_type().to_string();
@@ -132,8 +132,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_extract_ssl_data_no_cert() {
-        let data = extract_ssl_data(None);
+    fn test_ssl_data_no_cert() {
+        let data = ssl_data(None);
         assert!(!data.self_signed);
         assert!(data.subject_cn.is_none());
         assert!(data.issuer_cn.is_none());

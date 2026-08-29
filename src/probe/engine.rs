@@ -5,23 +5,16 @@ use tokio::net::TcpStream;
 use crate::models::{Protocol, ServiceData};
 use reqwest::Client;
 
-use super::{bgp, ftp, hikvision, imap, mikrotik, mqtt, mysql, pop3, pptp, rtsp, sccp, smtp, ssh, telnet};
+use super::{bgp, ftp, imap, mikrotik, mqtt, mysql, pop3, pptp, rtsp, sccp, smtp, ssh, telnet};
 
 /// Trait implemented by each protocol detector.
 pub trait ProtocolProbe {
-    /// Protocol identity.
     fn protocol(&self) -> Protocol;
 
-    /// `true` when the service never sends an initial banner and must be
-    /// actively probed (PPTP, MQTT).
     fn requires_probe_without_banner(&self) -> bool { false }
 
-    /// Passive banner detection — does this protocol recognize the bytes
-    /// in `banner`?  Runs on **any** port, independently of the port number.
     fn detects_banner(&self, _bytes: &[u8]) -> bool { false }
 
-    /// Execute the protocol probe.  `banner` contains the passive bytes
-    /// already read (may be empty).
     fn probe(
         &self,
         ip: &str,
@@ -33,9 +26,49 @@ pub trait ProtocolProbe {
 
 // ─── Enum dispatcher (avoids dyn) ────────────────────────────────────────────
 
-pub enum ProbeKind {
-    Ftp(ftp::FtpProbe),
+macro_rules! probe_kinds {
+    ($($variant:ident($path:path)),+ $(,)?) => {
+        pub enum ProbeKind {
+            $($variant($path)),+
+        }
+
+        impl ProtocolProbe for ProbeKind {
+            fn protocol(&self) -> Protocol {
+                match self { $(Self::$variant(p) => ProtocolProbe::protocol(p)),+ }
+            }
+
+            fn requires_probe_without_banner(&self) -> bool {
+                match self { $(Self::$variant(p) => ProtocolProbe::requires_probe_without_banner(p)),+ }
+            }
+
+            fn detects_banner(&self, bytes: &[u8]) -> bool {
+                match self { $(Self::$variant(p) => ProtocolProbe::detects_banner(p, bytes)),+ }
+            }
+
+            async fn probe(&self, ip: &str, port: u16, banner: &[u8], user_agent: &str) -> Result<ServiceData> {
+                match self {
+                    $(Self::$variant(p) => {
+                        let mut d = ProtocolProbe::probe(p, ip, port, banner, user_agent).await?;
+                        d.kind = self.protocol().as_str().into();
+                        Ok(d)
+                    }),+
+                }
+            }
+        }
+
+        impl ProbeRegistry {
+            pub fn new() -> Self {
+                Self {
+                    probes: vec![ $(ProbeKind::$variant($path)),+ ],
+                }
+            }
+        }
+    };
+}
+
+probe_kinds! {
     Ssh(ssh::SshProbe),
+    Ftp(ftp::FtpProbe),
     Smtp(smtp::SmtpProbe),
     Imap(imap::ImapProbe),
     Pop3(pop3::Pop3Probe),
@@ -47,85 +80,6 @@ pub enum ProbeKind {
     Mikrotik(mikrotik::MikrotikProbe),
     Rtsp(rtsp::RtspProbe),
     Bgp(bgp::BgpProbe),
-    Hikvision(hikvision::HikvisionProbe),
-}
-
-impl ProtocolProbe for ProbeKind {
-    fn protocol(&self) -> Protocol {
-        match self {
-            Self::Ftp(p) => p.protocol(),
-            Self::Ssh(p) => p.protocol(),
-            Self::Smtp(p) => p.protocol(),
-            Self::Imap(p) => p.protocol(),
-            Self::Pop3(p) => p.protocol(),
-            Self::Telnet(p) => p.protocol(),
-            Self::Mysql(p) => p.protocol(),
-            Self::Pptp(p) => p.protocol(),
-            Self::Mqtt(p) => p.protocol(),
-            Self::Sccp(p) => p.protocol(),
-            Self::Mikrotik(p) => p.protocol(),
-            Self::Rtsp(p) => p.protocol(),
-            Self::Bgp(p) => p.protocol(),
-            Self::Hikvision(p) => p.protocol(),
-        }
-    }
-
-    fn requires_probe_without_banner(&self) -> bool {
-        match self {
-            Self::Ftp(p) => p.requires_probe_without_banner(),
-            Self::Ssh(p) => p.requires_probe_without_banner(),
-            Self::Smtp(p) => p.requires_probe_without_banner(),
-            Self::Imap(p) => p.requires_probe_without_banner(),
-            Self::Pop3(p) => p.requires_probe_without_banner(),
-            Self::Telnet(p) => p.requires_probe_without_banner(),
-            Self::Mysql(p) => p.requires_probe_without_banner(),
-            Self::Pptp(p) => p.requires_probe_without_banner(),
-            Self::Mqtt(p) => p.requires_probe_without_banner(),
-            Self::Sccp(p) => p.requires_probe_without_banner(),
-            Self::Mikrotik(p) => p.requires_probe_without_banner(),
-            Self::Rtsp(p) => p.requires_probe_without_banner(),
-            Self::Bgp(p) => p.requires_probe_without_banner(),
-            Self::Hikvision(p) => p.requires_probe_without_banner(),
-        }
-    }
-
-    fn detects_banner(&self, bytes: &[u8]) -> bool {
-        match self {
-            Self::Ftp(p) => p.detects_banner(bytes),
-            Self::Ssh(p) => p.detects_banner(bytes),
-            Self::Smtp(p) => p.detects_banner(bytes),
-            Self::Imap(p) => p.detects_banner(bytes),
-            Self::Pop3(p) => p.detects_banner(bytes),
-            Self::Telnet(p) => p.detects_banner(bytes),
-            Self::Mysql(p) => p.detects_banner(bytes),
-            Self::Pptp(p) => p.detects_banner(bytes),
-            Self::Mqtt(p) => p.detects_banner(bytes),
-            Self::Sccp(p) => p.detects_banner(bytes),
-            Self::Mikrotik(p) => p.detects_banner(bytes),
-            Self::Rtsp(p) => p.detects_banner(bytes),
-            Self::Bgp(p) => p.detects_banner(bytes),
-            Self::Hikvision(p) => p.detects_banner(bytes),
-        }
-    }
-
-    async fn probe(&self, ip: &str, port: u16, banner: &[u8], user_agent: &str) -> Result<ServiceData> {
-        match self {
-            Self::Ftp(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Ssh(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Smtp(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Imap(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Pop3(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Telnet(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Mysql(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Pptp(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Mqtt(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Sccp(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Mikrotik(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Rtsp(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Bgp(p) => p.probe(ip, port, banner, user_agent).await,
-            Self::Hikvision(p) => p.probe(ip, port, banner, user_agent).await,
-        }
-    }
 }
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
@@ -135,27 +89,6 @@ pub struct ProbeRegistry {
 }
 
 impl ProbeRegistry {
-    pub fn new() -> Self {
-        Self {
-            probes: vec![
-                ProbeKind::Ssh(ssh::SshProbe),
-                ProbeKind::Ftp(ftp::FtpProbe),
-                ProbeKind::Smtp(smtp::SmtpProbe),
-                ProbeKind::Imap(imap::ImapProbe),
-                ProbeKind::Pop3(pop3::Pop3Probe),
-                ProbeKind::Telnet(telnet::TelnetProbe),
-                ProbeKind::Mysql(mysql::MysqlProbe),
-                ProbeKind::Pptp(pptp::PptpProbe),
-                ProbeKind::Mqtt(mqtt::MqttProbe),
-                ProbeKind::Sccp(sccp::SccpProbe),
-                ProbeKind::Mikrotik(mikrotik::MikrotikProbe),
-                ProbeKind::Rtsp(rtsp::RtspProbe),
-                ProbeKind::Bgp(bgp::BgpProbe),
-                ProbeKind::Hikvision(hikvision::HikvisionProbe),
-            ],
-        }
-    }
-
     /// Run the banner-first dispatcher.
     pub async fn dispatch(
         &self,
@@ -166,7 +99,6 @@ impl ProbeRegistry {
     ) -> Result<ServiceData> {
         let is_https_port = port == 443 || port == 8443;
 
-        // 1. Connect and read banner (skip for well-known HTTPS ports)
         let banner = if is_https_port {
             Vec::new()
         } else {
@@ -180,7 +112,6 @@ impl ProbeRegistry {
             }
         };
 
-        // 2. Run every probe's `detects_banner` over the captured bytes
         if !banner.is_empty() {
             let mut best: Option<(&ProbeKind, u32)> = None;
             for p in &self.probes {
@@ -196,14 +127,12 @@ impl ProbeRegistry {
             }
         }
 
-        // 3. Banner empty or unrecognized → try HTTP/TLS fallback
         if let Ok(data) = try_http_fallback(ip, port, client).await {
             if data.product.is_some() || data.http.is_some() {
                 return Ok(data);
             }
         }
 
-        // 4. Last resort: run active-only probes (PPTP, MQTT, etc.)
         for p in &self.probes {
             if p.requires_probe_without_banner() {
                 if let Ok(data) = p.probe(ip, port, &banner, user_agent).await {
@@ -212,12 +141,10 @@ impl ProbeRegistry {
             }
         }
 
-        // 5. Nothing matched
         Ok(ServiceData::default())
     }
 }
 
-/// Higher = tried first when multiple probes match a banner.
 fn probe_priority(proto: Protocol) -> u32 {
     match proto {
         Protocol::Ssh   => 100,
@@ -233,14 +160,11 @@ fn probe_priority(proto: Protocol) -> u32 {
         Protocol::Mikrotik => 70,
         Protocol::Rtsp    => 70,
         Protocol::Bgp     => 50,
-        Protocol::Hikvision => 65,
         _ => 0,
     }
 }
 
 async fn read_banner(ip: &str, port: u16) -> Result<Vec<u8>> {
-    // Tight connect/read timeouts: a banner-less service (e.g. HTTP) must leave room for the
-    // HTTP/HTTPS/TLS fallback inside the outer safety cap. See .agents/probe-analysis.md.
     let stream = tokio::time::timeout(
         std::time::Duration::from_secs(2),
         TcpStream::connect(format!("{}:{}", ip, port)),
@@ -268,7 +192,6 @@ async fn try_http_fallback(
     port: u16,
     client: &Client,
 ) -> Result<ServiceData> {
-    // On well-known HTTPS ports, try HTTPS first to avoid wasting time on HTTP
     let is_https_port = port == 443 || port == 8443;
     let (first, second) = if is_https_port {
         ("https", "http")
@@ -276,17 +199,16 @@ async fn try_http_fallback(
         ("http", "https")
     };
 
-    if let Ok(data) = super::http::probe_http(first, ip, port, client).await {
+    if let Ok(data) = super::http::probe(first, ip, port, client).await {
         return Ok(data);
     }
-    if let Ok(data) = super::http::probe_http(second, ip, port, client).await {
+    if let Ok(data) = super::http::probe(second, ip, port, client).await {
         return Ok(data);
     }
 
-    // Then raw TLS (cert data only), with a timeout
     if let Ok(Ok((_, ssl_data))) = tokio::time::timeout(
         std::time::Duration::from_secs(5),
-        super::tls::tls_connect(ip, port),
+        super::tls::connect(ip, port),
     ).await {
         let mut data = ServiceData::default();
         data.kind = "tls".into();

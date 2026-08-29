@@ -25,7 +25,6 @@ pub enum Protocol {
     Mikrotik,
     Rtsp,
     Bgp,
-    Hikvision,
     Unknown,
 }
 
@@ -49,7 +48,6 @@ impl Protocol {
             Protocol::Mikrotik => "mikrotik",
             Protocol::Rtsp => "rtsp",
             Protocol::Bgp => "bgp",
-            Protocol::Hikvision => "hikvision",
             Protocol::Unknown => "unknown",
         }
     }

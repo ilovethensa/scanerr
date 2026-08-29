@@ -2,12 +2,24 @@ pub mod parse;
 pub mod tech;
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 use anyhow::Result;
-use reqwest;
 
 use crate::models::{ServiceData, HttpData};
 
-pub async fn probe_http(
+use self::parse::header_str;
+
+static RE_CONCAT: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"document\.location\.href\s*=\s*["'][^"']*["']\s*\+\s*\w+\.location\.\w+\s*\+\s*["'][^"']*["']\s*\+\s*["']([^"']+)["']"#).unwrap()
+});
+static RE_META: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"(?i)content\s*=\s*["']\d+\s*;\s*url=([^"']+)["']"#).unwrap()
+});
+static RE_SIMPLE: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r#"document\.location\.href\s*=\s*["']([^"']+)["']"#).unwrap()
+});
+
+pub async fn probe(
     scheme: &str,
     ip: &str,
     port: u16,
@@ -17,7 +29,6 @@ pub async fn probe_http(
 
     let resp = client.get(&base_url).send().await?;
 
-    // Follow redirects manually, up to 3 hops
     let mut final_resp = resp;
     let mut redirect_count = 0;
     while (301..=308).contains(&final_resp.status().as_u16()) && redirect_count < 3 {
@@ -25,14 +36,13 @@ pub async fn probe_http(
             let next_url = if loc.starts_with("http") {
                 loc.to_string()
             } else {
-                // Relative URL — resolve against current
                 let base = final_resp.url().clone();
                 base.join(loc).map(|u| u.to_string()).unwrap_or_default()
             };
             if next_url.is_empty() { break; }
             match client.get(&next_url).send().await {
                 Ok(r) => { final_resp = r; redirect_count += 1; }
-                Err(_) => break, // redirect target failed — keep current response
+                Err(_) => break,
             }
         } else {
             break;
@@ -42,30 +52,12 @@ pub async fn probe_http(
     let status = final_resp.status().as_u16();
     let host = final_resp.headers().get("host").and_then(|h| h.to_str().ok()).map(|s| s.to_string());
 
-    let mut raw_headers: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for (key, value) in final_resp.headers() {
-        raw_headers
-            .entry(key.to_string())
-            .or_default()
-            .push(value.to_str().unwrap_or("").to_string());
-    }
-    let headers: BTreeMap<String, serde_json::Value> = raw_headers
-        .into_iter()
-        .map(|(k, v)| {
-            let val = if v.len() == 1 {
-                serde_json::Value::String(v.into_iter().next().unwrap())
-            } else {
-                serde_json::Value::Array(v.into_iter().map(serde_json::Value::String).collect())
-            };
-            (k, val)
-        })
-        .collect();
+    let headers = parse::headers_from_response(final_resp.headers());
 
     let body_bytes = final_resp.bytes().await.unwrap_or_default();
     let body_text = String::from_utf8_lossy(&body_bytes).replace('\0', "");
 
-    // Follow JavaScript redirects (e.g. Huawei's document.location.href)
-    let body_text = if let Some(js_url) = extract_js_redirect(&body_text) {
+    let body_text = if let Some(js_url) = js_redirect(&body_text) {
         let urls = if js_url.starts_with("http") {
             vec![js_url]
         } else if js_url.starts_with("//") {
@@ -104,24 +96,27 @@ pub async fn probe_http(
         body_text
     };
 
-    // Detect plain HTTP sent to an HTTPS server — signal the caller to retry with HTTPS
-    if is_https_rejection(status, &body_text) {
+    if https_reject(status, &body_text) {
         anyhow::bail!("server requires HTTPS");
     }
 
     let html_hash = parse::hash_bytes(&body_bytes);
-    let headers_hash = parse::hash_str(&headers_to_string(&headers));
+    let headers_hash = parse::hash_str(&headers_str(&headers));
 
     let title = parse::extract_title(&body_text);
     let server = header_str(&headers, "server");
 
-    // Fingerprint tech stack from IP request
     let mut tags = tech::detect(&headers, &body_text);
 
-    // Reverse DNS + hostname-based request
-    let rdns = reverse_dns(ip).await;
+    let (rdns, robots, securitytxt, favicon_hash) = tokio::join!(
+        rdns(ip),
+        fetch(client, &base_url, "/robots.txt"),
+        fetch(client, &base_url, "/.well-known/security.txt"),
+        favicon(client, &base_url),
+    );
+
     if let Some(ref hostname) = rdns {
-        if let Ok(hostname_tags) = probe_by_hostname(&client, &base_url, hostname).await {
+        if let Ok(hostname_tags) = by_host(client, &base_url, hostname).await {
             for tag in hostname_tags {
                 if !tags.iter().any(|t| t.eq_ignore_ascii_case(&tag)) {
                     tags.push(tag);
@@ -129,13 +124,6 @@ pub async fn probe_http(
             }
         }
     }
-
-    // Fetch robots.txt (non-blocking, best effort)
-    let robots = fetch_path(&client, &base_url, "/robots.txt").await;
-    let securitytxt = fetch_path(&client, &base_url, "/.well-known/security.txt").await;
-
-    // Fetch favicon for hash
-    let favicon_hash = fetch_favicon_hash(&client, &base_url).await;
 
     let mut http = HttpData {
         status,
@@ -155,28 +143,16 @@ pub async fn probe_http(
         redirects: Vec::new(),
     };
 
-    // Detect WAF from headers
     http.waf = detect_waf(&http.headers);
 
     let mut data = ServiceData::default();
     data.kind = scheme.into();
     data.http = Some(http);
 
-    // Capture TLS cert data for HTTPS
-    if scheme == "https" {
-        if let Ok((_, ssl_data)) = super::tls::tls_connect(ip, port).await {
-            if ssl_data.subject_cn.is_some() || ssl_data.issuer_cn.is_some() {
-                data.ssl = Some(ssl_data);
-            }
-        }
-    }
-
     Ok(data)
 }
 
-/// Fetch the same URL but with Host header set to the rDNS hostname.
-/// Returns any new tech tags found that weren't in the IP request.
-async fn probe_by_hostname(
+async fn by_host(
     client: &reqwest::Client,
     base_url: &str,
     hostname: &str,
@@ -187,37 +163,18 @@ async fn probe_by_hostname(
         .send()
         .await?;
 
-    let mut raw_headers: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for (key, value) in resp.headers() {
-        raw_headers
-            .entry(key.to_string())
-            .or_default()
-            .push(value.to_str().unwrap_or("").to_string());
-    }
-    let headers: BTreeMap<String, serde_json::Value> = raw_headers
-        .into_iter()
-        .map(|(k, v)| {
-            let val = if v.len() == 1 {
-                serde_json::Value::String(v.into_iter().next().unwrap())
-            } else {
-                serde_json::Value::Array(v.into_iter().map(serde_json::Value::String).collect())
-            };
-            (k, val)
-        })
-        .collect();
-
+    let headers = parse::headers_from_response(resp.headers());
     let body_bytes = resp.bytes().await.unwrap_or_default();
     let body_text = String::from_utf8_lossy(&body_bytes).replace('\0', "");
 
     Ok(tech::detect(&headers, &body_text))
 }
 
-async fn reverse_dns(ip: &str) -> Option<String> {
+async fn rdns(ip: &str) -> Option<String> {
     let addr: std::net::IpAddr = ip.parse().ok()?;
     let mut addrs = tokio::net::lookup_host(format!("{}:0", addr)).await.ok()?;
     let entry = addrs.next()?;
     let hostname = entry.ip().to_string();
-    // lookup_host returns the IP back if no PTR record exists
     if hostname != ip.to_string() {
         Some(hostname)
     } else {
@@ -225,7 +182,7 @@ async fn reverse_dns(ip: &str) -> Option<String> {
     }
 }
 
-async fn fetch_path(client: &reqwest::Client, base: &str, path: &str) -> Option<String> {
+async fn fetch(client: &reqwest::Client, base: &str, path: &str) -> Option<String> {
     let url = format!("{}{}", base, path);
     let resp = client.get(&url).send().await.ok()?;
     if !resp.status().is_success() { return None; }
@@ -238,7 +195,7 @@ async fn fetch_path(client: &reqwest::Client, base: &str, path: &str) -> Option<
     Some(text)
 }
 
-async fn fetch_favicon_hash(client: &reqwest::Client, base: &str) -> Option<i64> {
+async fn favicon(client: &reqwest::Client, base: &str) -> Option<i64> {
     let url = format!("{}/favicon.ico", base);
     let resp = client.get(&url).send().await.ok()?;
     if !resp.status().is_success() { return None; }
@@ -265,7 +222,7 @@ fn detect_waf(headers: &BTreeMap<String, serde_json::Value>) -> Option<String> {
     None
 }
 
-fn headers_to_string(headers: &BTreeMap<String, serde_json::Value>) -> String {
+fn headers_str(headers: &BTreeMap<String, serde_json::Value>) -> String {
     let mut parts: Vec<String> = headers.iter().map(|(k, v)| {
         match v {
             serde_json::Value::String(s) => format!("{}: {}", k, s),
@@ -280,28 +237,14 @@ fn headers_to_string(headers: &BTreeMap<String, serde_json::Value>) -> String {
     parts.join("\r\n")
 }
 
-fn header_str<'a>(headers: &'a BTreeMap<String, serde_json::Value>, key: &str) -> Option<String> {
-    headers.get(key).and_then(|v| match v {
-        serde_json::Value::String(s) => Some(s.clone()),
-        serde_json::Value::Array(arr) => arr.first().and_then(|v| v.as_str()).map(|s| s.to_string()),
-        _ => None,
-    })
-}
-
-fn extract_js_redirect(body: &str) -> Option<String> {
-    // Match concatenated: document.location.href = "https://" + window.location.host + "/" + "relogin.asp"
-    let concat = regex::Regex::new(r#"document\.location\.href\s*=\s*["'][^"']*["']\s*\+\s*\w+\.location\.\w+\s*\+\s*["'][^"']*["']\s*\+\s*["']([^"']+)["']"#).ok()?;
-    if let Some(caps) = concat.captures(body) {
+fn js_redirect(body: &str) -> Option<String> {
+    if let Some(caps) = RE_CONCAT.captures(body) {
         return Some(caps[1].to_string());
     }
-    // Match meta refresh: <meta http-equiv="refresh" content="0; URL=/path">
-    let meta = regex::Regex::new(r#"(?i)content\s*=\s*["']\d+\s*;\s*url=([^"']+)["']"#).ok()?;
-    if let Some(caps) = meta.captures(body) {
+    if let Some(caps) = RE_META.captures(body) {
         return Some(caps[1].to_string());
     }
-    // Match simple: document.location.href = "relogin.asp"
-    let simple = regex::Regex::new(r#"document\.location\.href\s*=\s*["']([^"']+)["']"#).ok()?;
-    if let Some(caps) = simple.captures(body) {
+    if let Some(caps) = RE_SIMPLE.captures(body) {
         let url = caps[1].to_string();
         if url.contains("relogin") || url.contains("login") || url.starts_with("/doc/") {
             return Some(url);
@@ -310,7 +253,7 @@ fn extract_js_redirect(body: &str) -> Option<String> {
     None
 }
 
-fn is_https_rejection(status: u16, body: &str) -> bool {
+fn https_reject(status: u16, body: &str) -> bool {
     if status == 400 || status == 495 || status == 496 {
         let lower = body.to_lowercase();
         return lower.contains("https")

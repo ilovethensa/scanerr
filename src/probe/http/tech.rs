@@ -1,24 +1,22 @@
 use std::collections::BTreeMap;
 
+use super::parse::header_str;
+
 pub fn detect(headers: &BTreeMap<String, serde_json::Value>, body: &str) -> Vec<String> {
     let mut tags = Vec::new();
 
-    // Server header → "name/version" tag
     if let Some(server) = header_str(headers, "server") {
         parse_server_header(&server, &mut tags);
     }
 
-    // x-powered-by → "name/version" tag
     if let Some(powered) = header_str(headers, "x-powered-by") {
         parse_powered_by(&powered, &mut tags);
     }
 
-    // ASP.NET detection
     if header_str(headers, "x-aspnet-version").is_some() || header_str(headers, "x-aspnetmvc-version").is_some() {
         push_unique(&mut tags, "ASP.NET");
     }
 
-    // Version extraction from body (frameworks where YAML can't capture the version)
     detect_versions_from_body(body, &mut tags);
 
     tags
@@ -145,12 +143,4 @@ fn push_unique(out: &mut Vec<String>, tag: &str) {
     if !out.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
         out.push(tag.to_string());
     }
-}
-
-fn header_str<'a>(headers: &'a BTreeMap<String, serde_json::Value>, key: &str) -> Option<String> {
-    headers.get(key).and_then(|v| match v {
-        serde_json::Value::String(s) => Some(s.clone()),
-        serde_json::Value::Array(arr) => arr.first().and_then(|v| v.as_str()).map(|s| s.to_string()),
-        _ => None,
-    })
 }
