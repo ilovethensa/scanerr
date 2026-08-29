@@ -1078,7 +1078,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tower-service",
- "webpki-roots 1.0.2",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -2015,7 +2015,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
- "webpki-roots 1.0.2",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -2162,24 +2162,54 @@ dependencies = [
  "env_logger",
  "ipnet",
  "log",
+ "reqwest",
+ "rustls",
+ "scanerr-fingerprint",
+ "scanerr-protocol",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "tempfile",
+ "tera",
+ "tokio",
+ "toml",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "scanerr-fingerprint"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "regex",
+ "scanerr-protocol",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
+name = "scanerr-protocol"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
  "maxminddb",
  "regex",
  "reqwest",
  "rustls",
  "serde",
  "serde_json",
- "serde_yaml",
  "sha2",
- "sqlx",
- "tempfile",
- "tera",
  "tokio",
  "tokio-rustls",
- "toml",
- "tower-http",
  "tracing",
- "tracing-subscriber",
- "webpki-roots 0.26.11",
  "x509-parser",
 ]
 
@@ -3317,15 +3347,6 @@ checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "webpki-roots"
-version = "0.26.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "521bc38abb08001b01866da9f51eb7c5d647a19260e00054a8c7fd5f9e57f7a9"
-dependencies = [
- "webpki-roots 1.0.2",
 ]
 
 [[package]]

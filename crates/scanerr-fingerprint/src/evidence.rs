@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::models::ServiceData;
+use scanerr_protocol::models::ServiceData;
 
 /// A normalized flat map of `field_key → [values]` used by the fingerprint
 /// engine to match signatures.  Decouples the matcher from the shape of

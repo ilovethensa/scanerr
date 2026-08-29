@@ -1,11 +1,11 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
-use crate::fingerprint::Engine;
-use crate::models::ServiceData;
+use scanerr_fingerprint::Engine;
+use scanerr_protocol::models::ServiceData;
+use scanerr_protocol::{engine, rndns};
+use scanerr_protocol::geoip::GeoIp;
 use crate::normalize::normalize_service;
-use super::{engine, geoip, rndns};
-use geoip::GeoIp;
 
 #[derive(Debug)]
 pub struct ProbeResult {
@@ -37,6 +37,19 @@ pub async fn probe(
         }
     };
     data.port = Some(port);
+
+    // Tech detection — runs after probe, before fingerprint
+    if let Some(ref mut http) = data.http {
+        let tech_tags = scanerr_fingerprint::tech::detect(
+            &http.headers,
+            http.body.as_deref().unwrap_or(""),
+        );
+        for tag in tech_tags {
+            if !http.tags.iter().any(|t| t.eq_ignore_ascii_case(&tag)) {
+                http.tags.push(tag);
+            }
+        }
+    }
 
     engine.identify(&mut data);
     normalize_service(&mut data);
@@ -109,6 +122,20 @@ pub async fn probe_standalone(
         .build()?;
     let mut data = registry.dispatch(clean_ip, port, user_agent, &client).await?;
     data.port = Some(port);
+
+    // Tech detection — runs after probe, before fingerprint
+    if let Some(ref mut http) = data.http {
+        let tech_tags = scanerr_fingerprint::tech::detect(
+            &http.headers,
+            http.body.as_deref().unwrap_or(""),
+        );
+        for tag in tech_tags {
+            if !http.tags.iter().any(|t| t.eq_ignore_ascii_case(&tag)) {
+                http.tags.push(tag);
+            }
+        }
+    }
+
     engine.identify(&mut data);
     normalize_service(&mut data);
     Ok(data)

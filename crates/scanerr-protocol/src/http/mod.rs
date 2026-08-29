@@ -1,5 +1,4 @@
 pub mod parse;
-pub mod tech;
 
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
@@ -106,7 +105,7 @@ pub async fn probe(
     let title = parse::extract_title(&body_text);
     let server = header_str(&headers, "server");
 
-    let mut tags = tech::detect(&headers, &body_text);
+    let tags = Vec::new();
 
     let (rdns, robots, securitytxt, favicon_hash) = tokio::join!(
         rdns(ip),
@@ -114,16 +113,6 @@ pub async fn probe(
         fetch(client, &base_url, "/.well-known/security.txt"),
         favicon(client, &base_url),
     );
-
-    if let Some(ref hostname) = rdns {
-        if let Ok(hostname_tags) = by_host(client, &base_url, hostname).await {
-            for tag in hostname_tags {
-                if !tags.iter().any(|t| t.eq_ignore_ascii_case(&tag)) {
-                    tags.push(tag);
-                }
-            }
-        }
-    }
 
     let mut http = HttpData {
         status,
@@ -150,24 +139,6 @@ pub async fn probe(
     data.http = Some(http);
 
     Ok(data)
-}
-
-async fn by_host(
-    client: &reqwest::Client,
-    base_url: &str,
-    hostname: &str,
-) -> Result<Vec<String>> {
-    let resp = client
-        .get(base_url)
-        .header("Host", hostname)
-        .send()
-        .await?;
-
-    let headers = parse::headers_from_response(resp.headers());
-    let body_bytes = resp.bytes().await.unwrap_or_default();
-    let body_text = String::from_utf8_lossy(&body_bytes).replace('\0', "");
-
-    Ok(tech::detect(&headers, &body_text))
 }
 
 async fn rdns(ip: &str) -> Option<String> {

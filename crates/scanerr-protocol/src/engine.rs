@@ -5,7 +5,7 @@ use tokio::net::TcpStream;
 use crate::models::{Protocol, ServiceData};
 use reqwest::Client;
 
-use super::{bgp, ftp, imap, mikrotik, mqtt, mysql, pop3, pptp, rtsp, sccp, smtp, ssh, telnet};
+use crate::{bgp, ftp, imap, mikrotik, mqtt, mysql, pop3, pptp, rtsp, sccp, smtp, ssh, telnet};
 
 /// Trait implemented by each protocol detector.
 pub trait ProtocolProbe {
@@ -199,16 +199,16 @@ async fn try_http_fallback(
         ("http", "https")
     };
 
-    if let Ok(data) = super::http::probe(first, ip, port, client).await {
+    if let Ok(data) = crate::http::probe(first, ip, port, client).await {
         return Ok(data);
     }
-    if let Ok(data) = super::http::probe(second, ip, port, client).await {
+    if let Ok(data) = crate::http::probe(second, ip, port, client).await {
         return Ok(data);
     }
 
     if let Ok(Ok((_, ssl_data))) = tokio::time::timeout(
         std::time::Duration::from_secs(5),
-        super::tls::connect(ip, port),
+        crate::tls::connect(ip, port),
     ).await {
         let mut data = ServiceData::default();
         data.kind = "tls".into();

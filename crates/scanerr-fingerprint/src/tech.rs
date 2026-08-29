@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::parse::header_str;
+use scanerr_protocol::http::parse::header_str;
 
 pub fn detect(headers: &BTreeMap<String, serde_json::Value>, body: &str) -> Vec<String> {
     let mut tags = Vec::new();

@@ -5,8 +5,8 @@ use tokio::net::TcpStream;
 
 use crate::models::{ServiceData, SshData, Protocol};
 
-use super::engine::ProtocolProbe;
-use super::net;
+use crate::engine::ProtocolProbe;
+use crate::net;
 
 pub struct SshProbe;
 

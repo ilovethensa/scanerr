@@ -1,12 +1,8 @@
-pub mod loader;
-pub mod score;
-pub mod signature;
-
 use std::sync::Arc;
 
 use crate::evidence::Evidence;
-use crate::models::ServiceData;
-use signature::{CompiledMatcher, CompiledSignature};
+use scanerr_protocol::models::ServiceData;
+use crate::signature::{CompiledMatcher, CompiledSignature};
 
 /// The fingerprint engine. Built once at startup, shared across all probes.
 #[derive(Clone)]
@@ -17,7 +13,7 @@ pub struct Engine {
 impl Engine {
     /// Load signatures from a directory tree.
     pub fn from_dir(path: impl AsRef<std::path::Path>) -> Self {
-        let sigs = loader::load_dir(path).unwrap_or_else(|e| {
+        let sigs = crate::loader::load_dir(path).unwrap_or_else(|e| {
             tracing::error!("failed to load signatures: {}", e);
             Vec::new()
         });
@@ -25,7 +21,7 @@ impl Engine {
     }
 
     /// Build from pre-loaded raw signatures (useful for tests).
-    pub fn from_signatures(raw: Vec<signature::Signature>) -> Self {
+    pub fn from_signatures(raw: Vec<crate::signature::Signature>) -> Self {
         let signatures: Vec<CompiledSignature> = raw.into_iter().map(compile).collect();
         tracing::info!("loaded {} fingerprints", signatures.len());
         Self { signatures: Arc::new(signatures) }
@@ -35,14 +31,14 @@ impl Engine {
     /// Sets `product`, `version`, `confidence`, and merges tags.
     pub fn identify(&self, data: &mut ServiceData) {
         let evidence = Evidence::from(&*data);
-        if let Some(result) = score::resolve(&self.signatures, &evidence) {
+        if let Some(result) = crate::score::resolve(&self.signatures, &evidence) {
             if let Some(sig) = self.signatures.iter().find(|s| s.id == result.signature_id) {
                 data.product = Some(sig.name.clone());
                 data.confidence = Some(result.confidence);
                 // Merge tags (don't overwrite existing)
                 for tag in &sig.tags {
                     if !data.tags.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
-                        data.tags.push(tag.clone());
+                        data.tags.push(tag.to_string());
                     }
                 }
             }
@@ -50,7 +46,7 @@ impl Engine {
     }
 }
 
-fn compile(raw: signature::Signature) -> CompiledSignature {
+fn compile(raw: crate::signature::Signature) -> CompiledSignature {
     let matchers: Vec<CompiledMatcher> = raw.matchers.iter()
         .map(CompiledMatcher::compile)
         .collect();
@@ -76,7 +72,8 @@ pub fn identify(data: &mut ServiceData) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::HttpData;
+    use crate::signature;
+    use scanerr_protocol::models::HttpData;
     use std::collections::BTreeMap;
 
     #[test]

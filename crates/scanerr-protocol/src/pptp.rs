@@ -3,8 +3,8 @@ use std::time::Duration;
 
 use crate::models::{Protocol, ServiceData};
 
-use super::engine::ProtocolProbe;
-use super::net;
+use crate::engine::ProtocolProbe;
+use crate::net;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const REPLY_TIMEOUT: Duration = Duration::from_secs(3);

@@ -1,3 +1,6 @@
+[workspace]
+members = ["crates/scanerr-protocol", "crates/scanerr-fingerprint"]
+
 [package]
 name = "scanerr"
 version = "0.1.0"
@@ -15,24 +18,21 @@ clap = { version = "4", features = ["derive"] }
 env_logger = "0.11"
 ipnet = "2"
 log = "0.4"
-maxminddb = "0.24"
 reqwest = { version = "0.12", features = ["rustls-tls", "json", "gzip"], default-features = false }
-regex = "1"
 rustls = { version = "0.23", features = ["ring"] }
+scanerr-fingerprint = { path = "crates/scanerr-fingerprint" }
+scanerr-protocol = { path = "crates/scanerr-protocol" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-serde_yaml = "0.9"
 sha2 = "0.10"
 sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls-ring-native-roots", "postgres", "migrate", "json", "derive"] }
 tera = "1"
 tokio = { version = "1", features = ["full"] }
-tokio-rustls = "0.26"
 toml = "0.8"
 tower-http = { version = "0.6", features = ["trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-webpki-roots = "0.26"
-x509-parser = "0.17"
 
 [dev-dependencies]
+scanerr-protocol = { path = "crates/scanerr-protocol" }
 tempfile = "3"

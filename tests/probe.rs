@@ -1,4 +1,4 @@
-use scanerr::probe::http;
+use scanerr_protocol::http;
 
 #[tokio::test]
 async fn test_probe_http_plain() {

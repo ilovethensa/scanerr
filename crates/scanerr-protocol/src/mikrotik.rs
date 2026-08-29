@@ -2,7 +2,7 @@ use anyhow::Result;
 
 use crate::models::{MikrotikData, Protocol, ServiceData};
 
-use super::engine::ProtocolProbe;
+use crate::engine::ProtocolProbe;
 
 pub struct MikrotikProbe;
 

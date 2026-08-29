@@ -4,8 +4,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use crate::models::{MqttData, Protocol, ServiceData};
 
-use super::engine::ProtocolProbe;
-use super::net;
+use crate::engine::ProtocolProbe;
+use crate::net;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 const REPLY_TIMEOUT: Duration = Duration::from_secs(5);

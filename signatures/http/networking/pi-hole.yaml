@@ -13,7 +13,3 @@ matchers:
     op: contains
     value: /admin/img/logo.svg
     weight: 7
-  - field: http.header.server
-    op: startswith
-    value: lighttpd
-    weight: 3

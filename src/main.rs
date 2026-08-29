@@ -295,7 +295,7 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
     info!("Starting probe stage...");
     let probe_queue = queue::LeasedQueue::new("queue_service_probes");
     let user_agent = config.probe.user_agent.clone();
-    let geoip = std::sync::Arc::new(probe::geoip::GeoIp::open(
+    let geoip = std::sync::Arc::new(scanerr_protocol::geoip::GeoIp::open(
         config.probe.geoip_db_path.as_deref(),
         config.probe.asn_db_path.as_deref(),
     ));
