@@ -89,6 +89,25 @@
                 </table>
             </div>
             <div>
+                <div class="section-title">Top Products</div>
+                <table class="stat-table">
+                    <thead><tr><th>Product</th><th>Count</th><th class="bar-cell"></th></tr></thead>
+                    <tbody>
+                    {% set max_product = stats.products[0].count | default(value=1) %}
+                    {% for p in stats.products %}
+                    <tr>
+                        <td>{{ p.product }}</td>
+                        <td class="num">{{ p.count }}</td>
+                        <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width: {{ (p.count * 100 / max_product) | round }}%"></div></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
                 <div class="section-title">Service Types</div>
                 <table class="stat-table">
                     <thead><tr><th>Kind</th><th>Count</th><th class="bar-cell"></th></tr></thead>
@@ -99,6 +118,22 @@
                         <td>{{ k.kind }}</td>
                         <td class="num">{{ k.count }}</td>
                         <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width: {{ (k.count * 100 / max_kind) | round }}%"></div></div></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div>
+                <div class="section-title">Transports</div>
+                <table class="stat-table">
+                    <thead><tr><th>Transport</th><th>Count</th><th class="bar-cell"></th></tr></thead>
+                    <tbody>
+                    {% set max_transport = stats.transports[0].count | default(value=1) %}
+                    {% for t in stats.transports %}
+                    <tr>
+                        <td>{{ t.transport }}</td>
+                        <td class="num">{{ t.count }}</td>
+                        <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width: {{ (t.count * 100 / max_transport) | round }}%"></div></div></td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -124,18 +159,35 @@
                 </table>
             </div>
             <div>
-                <div class="section-title">Queue Status</div>
-                <div class="queue-status">
-                    {% for q in stats.queues %}
-                    <div class="queue-row">
-                        <div>
-                            <div class="queue-name">{{ q.queue }}</div>
-                            <div class="queue-detail">{{ q.total - q.unclaimed }} processing</div>
-                        </div>
-                        <div class="queue-count">{{ q.unclaimed }} / {{ q.total }}</div>
-                    </div>
+                <div class="section-title">Top Tags</div>
+                <table class="stat-table">
+                    <thead><tr><th>Tag</th><th>Count</th><th class="bar-cell"></th></tr></thead>
+                    <tbody>
+                    {% set max_tag = stats.tags[0].count | default(value=1) %}
+                    {% for t in stats.tags %}
+                    <tr>
+                        <td>{{ t.tag }}</td>
+                        <td class="num">{{ t.count }}</td>
+                        <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width: {{ (t.count * 100 / max_tag) | round }}%"></div></div></td>
+                    </tr>
                     {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="queue-status">
+                <div class="section-title">Queue Status</div>
+                {% for q in stats.queues %}
+                <div class="queue-row">
+                    <div>
+                        <div class="queue-name">{{ q.queue }}</div>
+                        <div class="queue-detail">{{ q.total - q.unclaimed }} processing</div>
+                    </div>
+                    <div class="queue-count">{{ q.unclaimed }} / {{ q.total }}</div>
                 </div>
+                {% endfor %}
             </div>
         </div>
     </div>

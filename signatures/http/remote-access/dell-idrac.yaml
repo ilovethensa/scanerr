@@ -1,0 +1,23 @@
+id: dell-idrac
+name: Dell iDRAC
+category: remote-access
+tags: [bmc, server-management, remote-access, dell]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: idrac-start-screen
+    weight: 10
+  - field: http.body
+    op: contains
+    value: loginapp
+    weight: 7
+  - field: http.body
+    op: contains
+    value: clarityicons
+    weight: 6
+  - field: http.body
+    op: contains
+    value: cui-spinner
+    weight: 5

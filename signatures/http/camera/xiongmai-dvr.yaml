@@ -1,0 +1,27 @@
+id: xiongmai-dvr
+name: XiongMai DVR/NVR
+category: camera
+tags: [camera, surveillance, iot, dvr, nvr]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: VideoPlugin
+    weight: 8
+  - field: http.body
+    op: contains
+    value: TimeSliderPlugin
+    weight: 7
+  - field: http.body
+    op: contains
+    value: IDCS_INFO_TIP
+    weight: 6
+  - field: http.body
+    op: contains
+    value: loadingIndicator_bk
+    weight: 5
+  - field: http.body
+    op: contains
+    value: initview.gif
+    weight: 5

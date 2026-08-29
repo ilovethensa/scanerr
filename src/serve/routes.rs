@@ -332,6 +332,24 @@ struct CountryStat {
     count: i64,
 }
 
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+struct ProductStat {
+    product: String,
+    count: i64,
+}
+
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+struct TransportStat {
+    transport: String,
+    count: i64,
+}
+
+#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+struct TagStat {
+    tag: String,
+    count: i64,
+}
+
 #[derive(serde::Serialize)]
 struct QueueStat {
     queue: String,
@@ -346,6 +364,9 @@ struct StatsData {
     total_countries: i64,
     ports: Vec<PortStat>,
     kinds: Vec<KindStat>,
+    products: Vec<ProductStat>,
+    transports: Vec<TransportStat>,
+    tags: Vec<TagStat>,
     countries: Vec<CountryStat>,
     queues: Vec<QueueStat>,
 }
@@ -381,6 +402,25 @@ pub async fn stats(
          FROM hosts h WHERE NOT h.is_honeypot GROUP BY h.country_code ORDER BY count DESC LIMIT 15"
     ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    let products: Vec<ProductStat> = sqlx::query_as(
+        "SELECT s.data->>'product' as product, count(*) as count FROM services s \
+         JOIN hosts h ON s.host_id = h.id WHERE NOT h.is_honeypot \
+         AND s.data->>'product' IS NOT NULL \
+         GROUP BY s.data->>'product' ORDER BY count DESC LIMIT 20"
+    ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let transports: Vec<TransportStat> = sqlx::query_as(
+        "SELECT s.transport as transport, count(*) as count FROM services s \
+         JOIN hosts h ON s.host_id = h.id WHERE NOT h.is_honeypot \
+         GROUP BY s.transport ORDER BY count DESC"
+    ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let tags: Vec<TagStat> = sqlx::query_as(
+        "SELECT t as tag, count(*) as count FROM services s \
+         JOIN hosts h ON s.host_id = h.id, jsonb_array_elements_text(s.data->'tags') t \
+         WHERE NOT h.is_honeypot GROUP BY t ORDER BY count DESC LIMIT 20"
+    ).fetch_all(pool).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     let queues = vec![
         QueueStat {
             queue: "host_scans".into(),
@@ -404,6 +444,9 @@ pub async fn stats(
         total_countries: total_countries.0,
         ports,
         kinds,
+        products,
+        transports,
+        tags,
         countries,
         queues,
     };

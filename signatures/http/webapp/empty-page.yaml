@@ -1,0 +1,11 @@
+id: empty-page
+name: Empty Page
+category: web
+tags: [web, generic]
+priority: 10
+condition: any
+matchers:
+  - field: http.body
+    op: equals
+    value: ""
+    weight: 1

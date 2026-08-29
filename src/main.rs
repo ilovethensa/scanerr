@@ -27,6 +27,8 @@ enum Commands {
     All,
     /// One-off: re-normalize every service row (kind/product/tags). Safe to re-run.
     Normalize,
+    /// One-off: re-run every HTTP service through fingerprinting (re-identify). Safe to re-run.
+    Reidentify,
     /// Test: deep-scan a single IP
     TestScan {
         /// IP address to scan (e.g. 192.168.1.1)
@@ -115,6 +117,11 @@ async fn main() -> Result<()> {
         Commands::Sweep => run_sweep(pool, config).await?,
         Commands::Deepscan => run_deepscan(pool, config).await?,
         Commands::Normalize => scanerr::normalize::backfill(&pool).await?,
+        Commands::Reidentify => {
+            let sig_dir = std::path::Path::new(&config.signatures.dir);
+            let engine = fingerprint::Engine::from_dir(sig_dir);
+            scanerr::reidentify::reidentify_http(&pool, &engine).await?
+        }
         Commands::Probe => {
             let sig_dir = std::path::Path::new(&config.signatures.dir);
             let engine = fingerprint::Engine::from_dir(sig_dir);

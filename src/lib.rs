@@ -9,4 +9,5 @@ pub mod normalize;
 pub mod probe;
 pub mod query;
 pub mod queue;
+pub mod reidentify;
 pub mod serve;
