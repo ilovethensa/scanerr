@@ -101,6 +101,14 @@ async fn test_full_workflow(pool: sqlx::PgPool) {
 
     let engine = Engine::from_signatures(vec![]);
 
+    let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(8))
+        .danger_accept_invalid_certs(true)
+        .http1_only()
+        .build()
+        .unwrap();
+
     let result = dispatch::probe(
         &pool,
         probe_ip,
@@ -108,7 +116,7 @@ async fn test_full_workflow(pool: sqlx::PgPool) {
         probe_transport,
         "scanerr-test/1.0",
         None, // no GeoIP
-        None, // no ASN
+        &client,
         &engine,
     )
     .await

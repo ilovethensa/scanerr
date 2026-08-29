@@ -5,6 +5,7 @@ use crate::fingerprint::Engine;
 use crate::models::ServiceData;
 use crate::normalize::normalize_service;
 use super::{engine, geoip, rndns};
+use geoip::GeoIp;
 
 #[derive(Debug)]
 pub struct ProbeResult {
@@ -22,14 +23,14 @@ pub async fn probe(
     port: u16,
     transport: &str,
     _user_agent: &str,
-    geoip_db: Option<&str>,
-    asn_db: Option<&str>,
+    geoip: Option<&GeoIp>,
+    client: &reqwest::Client,
     engine: &Engine,
 ) -> Result<ProbeResult> {
     let clean_ip = ip_str.split('/').next().unwrap_or(ip_str);
 
     let registry = engine::ProbeRegistry::new();
-    let mut data = match registry.dispatch(clean_ip, port, _user_agent).await {
+    let mut data = match registry.dispatch(clean_ip, port, _user_agent, client).await {
         Ok(d) => d,
         Err(e) => {
             anyhow::bail!("probe dispatch failed for {}:{}: {}", clean_ip, port, e);
@@ -53,8 +54,8 @@ pub async fn probe(
             .await?;
     }
 
-    if let Some(db_path) = geoip_db {
-        if let Ok(info) = geoip::lookup(clean_ip, db_path) {
+    if let Some(db) = geoip {
+        if let Ok(info) = db.lookup(clean_ip) {
             sqlx::query(
                 "UPDATE hosts SET country_code = COALESCE($1, country_code), last_seen = $2 WHERE id = $3",
             )
@@ -66,8 +67,8 @@ pub async fn probe(
         }
     }
 
-    if let Some(db_path) = asn_db {
-        if let Ok(info) = geoip::lookup_asn(clean_ip, db_path) {
+    if let Some(db) = geoip {
+        if let Ok(info) = db.lookup_asn(clean_ip) {
             sqlx::query(
                 "UPDATE hosts SET asn = COALESCE($1, asn), org = COALESCE($2, org), last_seen = $3 WHERE id = $4",
             )
@@ -99,7 +100,14 @@ pub async fn probe_standalone(
 ) -> Result<ServiceData> {
     let clean_ip = ip_str.split('/').next().unwrap_or(ip_str);
     let registry = engine::ProbeRegistry::new();
-    let mut data = registry.dispatch(clean_ip, port, user_agent).await?;
+    let client = reqwest::Client::builder()
+        .user_agent(user_agent)
+        .redirect(reqwest::redirect::Policy::none())
+        .timeout(std::time::Duration::from_secs(8))
+        .danger_accept_invalid_certs(true)
+        .http1_only()
+        .build()?;
+    let mut data = registry.dispatch(clean_ip, port, user_agent, &client).await?;
     data.port = Some(port);
     engine.identify(&mut data);
     normalize_service(&mut data);

@@ -3,6 +3,7 @@ use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
 
 use crate::models::{Protocol, ServiceData};
+use reqwest::Client;
 
 use super::{bgp, ftp, hikvision, imap, mikrotik, mqtt, mysql, pop3, pptp, rtsp, sccp, smtp, ssh, telnet};
 
@@ -161,6 +162,7 @@ impl ProbeRegistry {
         ip: &str,
         port: u16,
         user_agent: &str,
+        client: &Client,
     ) -> Result<ServiceData> {
         let is_https_port = port == 443 || port == 8443;
 
@@ -195,7 +197,7 @@ impl ProbeRegistry {
         }
 
         // 3. Banner empty or unrecognized → try HTTP/TLS fallback
-        if let Ok(data) = try_http_fallback(ip, port, user_agent).await {
+        if let Ok(data) = try_http_fallback(ip, port, client).await {
             if data.product.is_some() || data.http.is_some() {
                 return Ok(data);
             }
@@ -264,7 +266,7 @@ async fn read_banner(ip: &str, port: u16) -> Result<Vec<u8>> {
 async fn try_http_fallback(
     ip: &str,
     port: u16,
-    user_agent: &str,
+    client: &Client,
 ) -> Result<ServiceData> {
     // On well-known HTTPS ports, try HTTPS first to avoid wasting time on HTTP
     let is_https_port = port == 443 || port == 8443;
@@ -274,10 +276,10 @@ async fn try_http_fallback(
         ("http", "https")
     };
 
-    if let Ok(data) = super::http::probe_http(first, ip, port, user_agent).await {
+    if let Ok(data) = super::http::probe_http(first, ip, port, client).await {
         return Ok(data);
     }
-    if let Ok(data) = super::http::probe_http(second, ip, port, user_agent).await {
+    if let Ok(data) = super::http::probe_http(second, ip, port, client).await {
         return Ok(data);
     }
 

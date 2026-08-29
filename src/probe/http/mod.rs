@@ -7,15 +7,12 @@ use reqwest;
 
 use crate::models::{ServiceData, HttpData};
 
-pub async fn probe_http(scheme: &str, ip: &str, port: u16, user_agent: &str) -> Result<ServiceData> {
-    let client = reqwest::Client::builder()
-        .user_agent(user_agent)
-        .redirect(reqwest::redirect::Policy::none())
-        .timeout(std::time::Duration::from_secs(8))
-        .danger_accept_invalid_certs(true)
-        .http1_only()
-        .build()?;
-
+pub async fn probe_http(
+    scheme: &str,
+    ip: &str,
+    port: u16,
+    client: &reqwest::Client,
+) -> Result<ServiceData> {
     let base_url = format!("{}://{}:{}", scheme, ip, port);
 
     let resp = client.get(&base_url).send().await?;

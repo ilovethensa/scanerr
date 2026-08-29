@@ -295,8 +295,21 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
     info!("Starting probe stage...");
     let probe_queue = queue::LeasedQueue::new("queue_service_probes");
     let user_agent = config.probe.user_agent.clone();
-    let geoip_db = config.probe.geoip_db_path.clone();
-    let asn_db = config.probe.asn_db_path.clone();
+    let geoip = std::sync::Arc::new(probe::geoip::GeoIp::open(
+        config.probe.geoip_db_path.as_deref(),
+        config.probe.asn_db_path.as_deref(),
+    ));
+    // Single shared HTTP client for the whole probe stage — reused across every
+    // probed host instead of being rebuilt (with a fresh connection pool) per IP.
+    let http_client = std::sync::Arc::new(
+        reqwest::Client::builder()
+            .user_agent(&user_agent)
+            .redirect(reqwest::redirect::Policy::none())
+            .timeout(std::time::Duration::from_secs(8))
+            .danger_accept_invalid_certs(true)
+            .http1_only()
+            .build()?,
+    );
     // Outer safety cap for a single probe. Internal phase timeouts already bound each step
     // (read_banner 2s+2s, HTTP/HTTPS/TLS fallback 5s each), so the old 5s cap killed probes
     // mid-fallback and dropped ~95% of open ports. Keep at least 20s. See .agents/probe-analysis.md.
@@ -323,8 +336,8 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
         for (id, ip_str, port, transport) in items {
             let pool = pool.clone();
             let user_agent = user_agent.clone();
-            let geoip_db = geoip_db.clone();
-            let asn_db = asn_db.clone();
+            let geoip = geoip.clone();
+            let http_client = http_client.clone();
             let engine = engine.clone();
             let probe_queue = probe_queue.clone();
             let probe_timeout = probe_timeout;
@@ -340,8 +353,8 @@ async fn run_probe(pool: PgPool, config: config::Config, engine: fingerprint::En
                         port as u16,
                         &transport,
                         &user_agent,
-                        geoip_db.as_deref(),
-                        asn_db.as_deref(),
+                        Some(&*geoip),
+                        &http_client,
                         &engine,
                     ),
                 ).await {
