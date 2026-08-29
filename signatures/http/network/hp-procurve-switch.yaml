@@ -1,0 +1,23 @@
+id: hp-procurve-switch
+name: HP ProCurve Switch
+category: network
+tags: [switch, network, hp, aruba, iot]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: ProCurve Switch
+    weight: 10
+  - field: http.body
+    op: contains
+    value: ProCurve Switch
+    weight: 5
+  - field: http.body
+    op: contains
+    value: This product requires a frame capable browser
+    weight: 4
+  - field: http.body
+    op: contains
+    value: nctabs.html
+    weight: 3

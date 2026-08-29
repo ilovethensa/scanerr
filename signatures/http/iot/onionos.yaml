@@ -1,0 +1,19 @@
+id: onionos
+name: OnionOS
+category: iot
+tags: [iot, onion, omega, webos]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: Onion Corporation
+    weight: 10
+  - field: http.body
+    op: contains
+    value: OnionOS
+    weight: 8
+  - field: http.title
+    op: equals
+    value: OnionOS
+    weight: 5

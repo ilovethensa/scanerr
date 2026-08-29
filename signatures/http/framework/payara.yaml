@@ -1,0 +1,15 @@
+id: payara
+name: Payara Server
+category: framework
+tags: [java, application-server]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: startswith
+    value: Payara Server
+    weight: 10
+  - field: http.title
+    op: contains
+    value: Payara Server
+    weight: 8

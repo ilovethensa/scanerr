@@ -1,0 +1,19 @@
+id: zyxel-device
+name: ZyXEL Device
+category: networking
+tags: [router, networking, switch]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: FaviconZyxel.png
+    weight: 10
+  - field: http.body
+    op: contains
+    value: zyxel.js
+    weight: 8
+  - field: http.body
+    op: contains
+    value: zyxel-icon
+    weight: 7

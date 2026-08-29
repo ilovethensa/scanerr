@@ -1,0 +1,15 @@
+id: konica-minolta
+name: Konica Minolta
+category: printer
+tags: [printer, office]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: KONICA MINOLTA
+    weight: 10
+  - field: http.header.server
+    op: startswith
+    value: debut
+    weight: 5

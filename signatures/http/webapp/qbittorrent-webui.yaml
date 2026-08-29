@@ -6,8 +6,8 @@ priority: 80
 condition: any
 matchers:
   - field: http.title
-    op: equals
-    value: qBittorrent WebUI
+    op: startswith
+    value: qBittorrent
     weight: 10
   - field: http.body
     op: contains

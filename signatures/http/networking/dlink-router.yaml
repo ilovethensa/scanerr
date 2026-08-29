@@ -7,12 +7,20 @@ condition: any
 matchers:
   - field: http.body
     op: contains
+    value: nw-empty-page-state-image-error
+    weight: 10
+  - field: http.body
+    op: contains
     value: AppMobileCtrl
     weight: 8
   - field: http.body
     op: contains
-    value: nw-empty-page-state-image-error
-    weight: 10
+    value: "<title>D-LINK</title>"
+    weight: 9
+  - field: http.body
+    op: contains
+    value: login_frame
+    weight: 5
   - field: http.body
     op: contains
     value: /admin/templates/body.tpl.html

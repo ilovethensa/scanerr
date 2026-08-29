@@ -1,0 +1,19 @@
+id: fortigate
+name: FortiGate
+category: vpn
+tags: [firewall, vpn, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: FortiGate
+    weight: 10
+  - field: ssl.subject_cn
+    op: equals
+    value: FortiGate
+    weight: 9
+  - field: http.body
+    op: contains
+    value: FortiGate
+    weight: 6

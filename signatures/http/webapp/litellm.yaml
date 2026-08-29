@@ -1,0 +1,15 @@
+id: litellm
+name: LiteLLM
+category: webapp
+tags: [ai, llm, api]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: LiteLLM
+    weight: 10
+  - field: http.body
+    op: contains
+    value: LiteLLM API
+    weight: 7

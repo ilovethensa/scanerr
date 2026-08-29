@@ -1,0 +1,15 @@
+id: opnsense
+name: OPNsense
+category: vpn
+tags: [firewall, vpn, networking]
+priority: 80
+condition: any
+matchers:
+  - field: http.header.server
+    op: equals
+    value: OPNsense
+    weight: 10
+  - field: http.title
+    op: contains
+    value: OPNsense
+    weight: 8

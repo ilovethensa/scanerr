@@ -1,0 +1,23 @@
+id: tekno-combox
+name: Tekno-ComBox
+category: iot
+tags: [iot, solar, modbus, tracker, tekno]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: Tekno-ComBox
+    weight: 10
+  - field: http.body
+    op: contains
+    value: Tekno-ComBox
+    weight: 5
+  - field: http.body
+    op: contains
+    value: comboxApp
+    weight: 4
+  - field: http.body
+    op: contains
+    value: Holding Registers
+    weight: 3

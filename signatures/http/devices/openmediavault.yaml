@@ -1,0 +1,15 @@
+id: openmediavault
+name: openmediavault
+category: devices
+tags: [nas, storage, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: contains
+    value: openmediavault
+    weight: 10
+  - field: http.body
+    op: contains
+    value: openmediavault
+    weight: 6

@@ -1,0 +1,15 @@
+id: element-matrix
+name: Element (Matrix)
+category: messaging
+tags: [chat, matrix, self-hosted]
+priority: 80
+condition: any
+matchers:
+  - field: http.body
+    op: contains
+    value: vector-icons/apple-touch-icon
+    weight: 10
+  - field: http.title
+    op: equals
+    value: Element
+    weight: 6

@@ -1,0 +1,19 @@
+id: vue-itaskcoin
+name: vue-itaskcoin
+category: webapp
+tags: [crypto, dashboard, vue, pwa]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: vue-itaskcoin
+    weight: 10
+  - field: http.body
+    op: contains
+    value: vue-itaskcoin
+    weight: 5
+  - field: http.body
+    op: contains
+    value: "We're sorry but vue-itaskcoin doesn't work properly without JavaScript enabled"
+    weight: 4

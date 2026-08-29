@@ -7,7 +7,7 @@ use serde_json::{json, Value};
 use sqlx::PgPool;
 
 use super::state::AppState;
-use crate::query::QueryBuilder;
+use crate::query::{parse_query, build_search_query};
 
 fn html_response(body: String) -> (StatusCode, HeaderMap, String) {
     let mut headers = HeaderMap::new();
@@ -71,37 +71,10 @@ pub async fn search(
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<(StatusCode, HeaderMap, String), StatusCode> {
     let query = params.get("q").cloned().unwrap_or_default();
-    let terms = QueryBuilder::parse_filter(&query);
+    let ast = parse_query(&query);
+    let (sql, query_params) = build_search_query(&ast);
 
-    let mut qb = QueryBuilder::new();
-    for term in &terms {
-        match term.key.as_str() {
-            "port" => {
-                if let Ok(port) = term.value.parse::<u16>() {
-                    qb.add_port(port);
-                }
-            }
-            "tag" => qb.add_tag(&term.value),
-            "country" => qb.add_country(&term.value),
-            "kind" => qb.add_jsonb_condition("kind", &term.value),
-            "product" => qb.add_jsonb_condition("product", &term.value),
-            "version" => qb.add_jsonb_condition("version", &term.value),
-            "banner" => qb.add_jsonb_condition("banner", &term.value),
-            "http.title" => qb.add_jsonb_condition("http.title", &term.value),
-            "http.server" => qb.add_jsonb_condition("http.server", &term.value),
-            "http.waf" => qb.add_jsonb_condition("http.waf", &term.value),
-            "http.status" => qb.add_jsonb_condition("http.status", &term.value),
-            "ssl.cert_cn" => qb.add_jsonb_condition("ssl.subject_cn", &term.value),
-            "ssl.issuer" => qb.add_jsonb_condition("ssl.issuer_cn", &term.value),
-            "ssh.product" => qb.add_jsonb_condition("ssh.product", &term.value),
-            _ => {}
-        }
-    }
-
-    let sql = qb.build_query();
-    let query_params = qb.params();
-
-    let rows = fetch_service_rows(&state.pool, &sql, query_params)
+    let rows = fetch_service_rows(&state.pool, &sql, &query_params)
         .await
         .map_err(|e| {
             tracing::error!("search query failed: {}", e);
@@ -277,27 +250,10 @@ pub async fn api_search(
     Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Value>, StatusCode> {
     let query = params.get("q").cloned().unwrap_or_default();
-    let terms = QueryBuilder::parse_filter(&query);
+    let ast = parse_query(&query);
+    let (sql, query_params) = build_search_query(&ast);
 
-    let mut qb = QueryBuilder::new();
-    for term in &terms {
-        match term.key.as_str() {
-            "port" => {
-                if let Ok(port) = term.value.parse::<u16>() {
-                    qb.add_port(port);
-                }
-            }
-            "tag" => qb.add_tag(&term.value),
-            "country" => qb.add_country(&term.value),
-            "http.title" => qb.add_jsonb_condition("http.title", &term.value),
-            _ => {}
-        }
-    }
-
-    let sql = qb.build_query();
-    let query_params = qb.params();
-
-    let rows = fetch_service_rows(&state.pool, &sql, query_params)
+    let rows = fetch_service_rows(&state.pool, &sql, &query_params)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

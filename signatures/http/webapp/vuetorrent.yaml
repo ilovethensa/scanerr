@@ -1,0 +1,15 @@
+id: vuetorrent
+name: VueTorrent
+category: webapp
+tags: [torrent, p2p, file-sharing]
+priority: 80
+condition: any
+matchers:
+  - field: http.title
+    op: equals
+    value: VueTorrent
+    weight: 10
+  - field: http.body
+    op: contains
+    value: VueTorrent
+    weight: 6
