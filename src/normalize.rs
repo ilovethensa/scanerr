@@ -202,28 +202,53 @@ fn normalize_tags(data: &mut ServiceData) {
 
 /// Backfill all existing services in the database through normalize_service.
 /// Idempotent — normalizing clean data is a no-op.
+///
+/// One-off data migration. Do NOT call this on every stage startup — it
+/// full-scans the services table and will saturate the DB (see commit history).
+/// Paginated by id (keyset) so it never loads the whole table into memory and
+/// can be re-run safely.
 pub async fn backfill(pool: &sqlx::PgPool) -> anyhow::Result<()> {
     use sqlx::Row;
 
-    let rows: Vec<(i64, serde_json::Value)> = sqlx::query("SELECT id, data FROM services")
-        .fetch_all(pool)
-        .await?
-        .iter()
-        .map(|row| (row.get::<i64, _>("id"), row.get::<serde_json::Value, _>("data")))
-        .collect();
-
+    const CHUNK: i64 = 1000;
+    let mut last_id: i64 = 0;
     let mut updated = 0u32;
-    for (id, data_val) in &rows {
-        let mut data: ServiceData = serde_json::from_value(data_val.clone())?;
-        normalize_service(&mut data);
-        let new_json = serde_json::to_value(&data)?;
-        if *data_val != new_json {
-            sqlx::query("UPDATE services SET data = $1 WHERE id = $2")
-                .bind(&new_json)
-                .bind(id)
-                .execute(pool)
-                .await?;
-            updated += 1;
+
+    loop {
+        let pg_rows = sqlx::query(
+            "SELECT id, data FROM services WHERE id > $1 ORDER BY id ASC LIMIT $2",
+        )
+        .bind(last_id)
+        .bind(CHUNK)
+        .fetch_all(pool)
+        .await?;
+
+        let rows: Vec<(i64, serde_json::Value)> = pg_rows
+            .iter()
+            .map(|row| (row.get::<i64, _>("id"), row.get::<serde_json::Value, _>("data")))
+            .collect();
+
+        if rows.is_empty() {
+            break;
+        }
+
+        for (id, data_val) in &rows {
+            let mut data: ServiceData = serde_json::from_value(data_val.clone())?;
+            normalize_service(&mut data);
+            let new_json = serde_json::to_value(&data)?;
+            if *data_val != new_json {
+                sqlx::query("UPDATE services SET data = $1 WHERE id = $2")
+                    .bind(&new_json)
+                    .bind(id)
+                    .execute(pool)
+                    .await?;
+                updated += 1;
+            }
+        }
+
+        last_id = rows.last().unwrap().0;
+        if (rows.len() as i64) < CHUNK {
+            break;
         }
     }
 

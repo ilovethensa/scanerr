@@ -25,6 +25,8 @@ enum Commands {
     Serve,
     /// Run all stages in a single process (for local testing)
     All,
+    /// One-off: re-normalize every service row (kind/product/tags). Safe to re-run.
+    Normalize,
     /// Test: deep-scan a single IP
     TestScan {
         /// IP address to scan (e.g. 192.168.1.1)
@@ -110,14 +112,9 @@ async fn main() -> Result<()> {
     db::run_migrations(&pool).await?;
 
     match cli.command {
-        Commands::Sweep => {
-            scanerr::normalize::backfill(&pool).await?;
-            run_sweep(pool, config).await?
-        }
-        Commands::Deepscan => {
-            scanerr::normalize::backfill(&pool).await?;
-            run_deepscan(pool, config).await?
-        }
+        Commands::Sweep => run_sweep(pool, config).await?,
+        Commands::Deepscan => run_deepscan(pool, config).await?,
+        Commands::Normalize => scanerr::normalize::backfill(&pool).await?,
         Commands::Probe => {
             let sig_dir = std::path::Path::new(&config.signatures.dir);
             let engine = fingerprint::Engine::from_dir(sig_dir);

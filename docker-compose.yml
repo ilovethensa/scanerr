@@ -63,7 +63,6 @@ services:
     volumes:
       - ./scanerr.toml:/app/scanerr.toml:ro
     deploy:
-      replicas: 4
       resources:
         limits:
           cpus: '1.0'
@@ -86,7 +85,6 @@ services:
       - ./GeoLite2-City.mmdb:/app/GeoLite2-City.mmdb:ro
       - ./GeoLite2-ASN.mmdb:/app/GeoLite2-ASN.mmdb:ro
     deploy:
-      replicas: 4
       resources:
         limits:
           cpus: '0.5'
